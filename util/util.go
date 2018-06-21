@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"net/http"
 	"resulguldibi/color-api/entity"
+
+	"github.com/satori/go.uuid"
 )
 
 func CheckErr(err error) {
@@ -101,4 +103,22 @@ func GenerateMixColor(colors []*entity.Color) *entity.Color {
 	color.B = int(math.Floor(float64(b / length)))
 
 	return color
+}
+
+func GenerateGuid() string {
+	var id uuid.UUID
+	var err error
+	for {
+		id, err = uuid.NewV4()
+		if err == nil {
+			break
+		}
+	}
+	return id.String()
+}
+
+func IsMatchedColors(colors []*entity.Color, color *entity.Color) bool {
+	mixedColor := GenerateMixColor(colors)
+	isValid := IsColorsEquals(mixedColor, color)
+	return isValid
 }

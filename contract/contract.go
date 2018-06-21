@@ -7,6 +7,7 @@ import (
 type GetColorResponse struct {
 	MixedColor   *entity.Color   `json:"mixedColor"`
 	RandomColors []*entity.Color `json:"randomColors"`
+	Code         string          `json:"code"`
 }
 
 type ValidateColorsResponse struct {

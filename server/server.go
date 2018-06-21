@@ -30,6 +30,18 @@ func NewServer() *gin.Engine {
 		colorHandler.HandleValidateColors(ctx)
 	})
 
+	server.POST("/signup", func(ctx *gin.Context) {
+
+	})
+
+	server.POST("/signin", func(ctx *gin.Context) {
+
+	})
+
+	server.GET("/ranking", func(ctx *gin.Context) {
+
+	})
+
 	return server
 }
 

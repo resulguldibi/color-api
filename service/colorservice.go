@@ -52,6 +52,10 @@ func (service ColorService) GetRandomColors(level int64) (*contract.GetColorResp
 
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
+	response.Code = util.GenerateGuid()
+
+	//1. get user-id from client in http request header with key "Authorization" in JWT format.
+	//2. update user point calculation key with this guid (store this data in redis -> hmset user-point-calculation user-id "1234" guid "12s12-12sas-3asw12-12sa1")
 
 	return response, err
 }
@@ -60,8 +64,19 @@ func (service ColorService) ValidateColors(colors []*entity.Color, color *entity
 	response := &contract.ValidateColorsResponse{}
 	var err error
 
-	mixedColor := util.GenerateMixColor(colors)
-	response.IsValid = util.IsColorsEquals(mixedColor, color)
+	//1. get user-id from client in http request header with key "Authorization" in JWT format.
+	//2. get code from client (code was sended to client in /colors response) in /validate request to calculate user point (client should send this guid in /validate request)
+	//3. increment user step number in every /validate request (store this data in redis        -> hmset user-step-number user-id "1234" guid "12s12-12sas-3asw12-12sa1" new-step-number "10")
 
+	isMatched := util.IsMatchedColors(colors, color)
+
+	if !isMatched {
+		//3.1.a if step number is reached to max retry number, then game is over.
+	} else {
+		//3.2.a calculate point with generated point algorithm.
+		//3.2.b update user point if /validate endpoint return success code(store this data in redis   -> hmset user-point user-id "1234" guid "12s12-12sas-3asw12-12sa1" point "100")
+	}
+
+	response.IsValid = isMatched
 	return response, err
 }
