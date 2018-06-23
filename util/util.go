@@ -29,10 +29,12 @@ func PrepareResponseStatus(err interface{}) entity.ResponseStatus {
 	}
 }
 
-func PrepareResponseStatusWithMessage(isSucccess bool, message string) entity.ResponseStatus {
+func PrepareResponseStatusWithMessage(isSucccess bool, message string, code string, stack string) entity.ResponseStatus {
 	return entity.ResponseStatus{
 		IsSucccess: isSucccess,
 		Message:    message,
+		Code:       code,
+		Stack:      stack,
 	}
 }
 

@@ -1,12 +1,18 @@
 package service
 
 import (
+	"encoding/json"
+	"fmt"
 	"resulguldibi/color-api/contract"
 	"resulguldibi/color-api/entity"
+	"resulguldibi/color-api/types"
 	"resulguldibi/color-api/util"
+	"strconv"
 )
 
-func (service ColorService) GetRandomColors(level int64) (*contract.GetColorResponse, error) {
+const raundStartPoint int = 20
+
+func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
 	response := &contract.GetColorResponse{}
 	var err error
 	var count int64 = 5*level + 1
@@ -50,31 +56,422 @@ func (service ColorService) GetRandomColors(level int64) (*contract.GetColorResp
 		finalRandomColors[random] = tmp
 	}
 
+	code := util.GenerateGuid()
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
-	response.Code = util.GenerateGuid()
+	response.Code = code
 
-	//1. get user-id from client in http request header with key "Authorization" in JWT format.
-	//2. update user point calculation key with this guid (store this data in redis -> hmset user-point-calculation user-id "1234" guid "12s12-12sas-3asw12-12sa1")
+	//save generated random colors to use in /validate endpoint
+	allColors := append(finalRandomColors, mixedColor)
+	err = service.setUserRaundGeneratedRandomColors(code, allColors)
+	if err != nil {
+		panic(err)
+	}
+
+	//update user point calculation key with this guid (store this data in redis -> hmset user-raund "1234" "12s12-12sas-3asw12-12sa1")
+
+	var existingKey string
+	existingKey, err = service.getUserRaundKey(userId)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if existingKey != "" {
+		err = service.deleteUserExistingRaundGeneratedRandomColors(existingKey)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = service.setUserRaundKey(userId, code)
+	if err != nil {
+		panic(err)
+	}
+
+	err = service.setUserRaundLevel(userId, level)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return response, err
 }
 
-func (service ColorService) ValidateColors(colors []*entity.Color, color *entity.Color) (*contract.ValidateColorsResponse, error) {
+func (service *ColorService) setUserRaundKey(userId string, key string) error {
+	data := make(map[string]interface{})
+
+	data[userId] = key
+
+	_, err := service.redisClient.HMSet("user-raund-key", data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundKey(userId string) (string, error) {
+	return service.redisClient.HMGet("user-raund-key", userId)
+}
+
+func (service *ColorService) setUserRaundGeneratedRandomColors(key string, colors []*entity.Color) error {
+	data := make(map[string]interface{})
+
+	colorBytes, err := json.Marshal(colors)
+
+	if err != nil {
+		return err
+	}
+
+	data[key] = string(colorBytes)
+
+	_, err = service.redisClient.HMSet("user-raund-generated-random-colors", data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserExistingRaundGeneratedRandomColors(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-generated-random-colors", key)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundGeneratedRandomColors(key string) ([]*entity.Color, error) {
+
+	result, err := service.redisClient.HMGet("user-raund-generated-random-colors", key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	actualColors := []*entity.Color{}
+
+	err = json.Unmarshal([]byte(result), &actualColors)
+
+	return actualColors, err
+}
+
+func (service *ColorService) validateSendedColors(userId string, key string, colors []*entity.Color) (bool, error) {
+	var isValid bool = true
+
+	level, err := service.getUserRaundLevel(userId)
+
+	if err != nil {
+		return false, err
+	}
+
+	expectedColorsCount := level + 1
+
+	if expectedColorsCount != len(colors) {
+		return false, types.NewBusinessException(fmt.Sprintf("invalid colors count -> expected :%d, actual :%d", expectedColorsCount, len(colors)), "exp.invalidcolorscount")
+	}
+
+	actualColors, err := service.getUserRaundGeneratedRandomColors(key)
+
+	if err != nil {
+		return false, err
+	}
+
+	if colors != nil && len(colors) > 0 && actualColors != nil && len(actualColors) > 0 {
+		for _, color := range colors {
+			if !util.IsColorExist(actualColors, color) {
+				isValid = false
+				break
+			}
+		}
+	}
+
+	return isValid, err
+}
+
+func (service *ColorService) updateUserRaundStepNumber(userId string, key string) error {
+
+	//hmset user-raund-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
+
+	step, err := service.getUserRaundStepNumber(userId, key)
+
+	if err != nil {
+		return err
+	}
+
+	step = step + 1
+
+	err = service.setUserRaundStepNumber(userId, key, step)
+
+	return err
+}
+
+func (service *ColorService) setUserRaundStepNumber(userId string, key string, step int) error {
+
+	data := make(map[string]interface{})
+
+	data[userId] = key
+	data[key] = step
+
+	_, err := service.redisClient.HMSet("user-raund-step-number", data)
+
+	return err
+
+}
+
+func (service *ColorService) getUserRaundStepNumber(userId string, key string) (int, error) {
+
+	result, err := service.redisClient.HMGet("user-raund-step-number", key)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	step, err := strconv.Atoi(result)
+
+	return step, err
+
+}
+
+func (service *ColorService) checkUserRaundStepNumber(userId string, key string) error {
+
+	var maxStep int = 3
+	step, err := service.getUserRaundStepNumber(userId, key)
+	if err != nil {
+		return err
+	}
+
+	if step >= maxStep {
+		return types.NewGameOverException("max retry count reached", "exp.maxretrycountreached")
+	}
+	return nil
+}
+
+func (service *ColorService) getUserRaundPoint(userId string, key string) (int, error) {
+
+	// hmget user-raund-point "12s12-12sas-3asw12-12sa1"
+
+	result, err := service.redisClient.HMGet("user-raund-point", key)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	point, err := strconv.Atoi(result)
+
+	return point, err
+}
+
+func (service *ColorService) setUserRaundPoint(userId string, key string, point int) error {
+	//hmset user-raund-point "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "100"
+	data := make(map[string]interface{})
+
+	data[userId] = key
+	data[key] = point
+
+	_, err := service.redisClient.HMSet("user-raund-point", data)
+
+	return err
+}
+
+func (service *ColorService) getUserTotalPoint(userId string, key string) (int, error) {
+
+	// hmget user-raund-point "12s12-12sas-3asw12-12sa1"
+
+	result, err := service.redisClient.HMGet("user-total-point", key)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	point, err := strconv.Atoi(result)
+
+	return point, err
+}
+
+func (service *ColorService) setUserTotalPoint(userId string, key string, point int) error {
+	//hmset user-raund-point "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "100"
+	data := make(map[string]interface{})
+
+	data[userId] = key
+	data[key] = point
+
+	_, err := service.redisClient.HMSet("user-total-point", data)
+
+	return err
+}
+
+func (service *ColorService) updateUserTotalPoint(userId string, key string, pointToAdd int) error {
+
+	//hmset user-raund-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
+
+	totalPoint, err := service.getUserTotalPoint(userId, key)
+
+	if err != nil {
+		return err
+	}
+
+	totalPoint = totalPoint + pointToAdd
+
+	err = service.setUserTotalPoint(userId, key, totalPoint)
+
+	return err
+}
+
+func (service *ColorService) calculateUserRaundPoint(userId string, key string) (int, error) {
+
+	//hmset user-raund-point "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "100"
+	step, err := service.getUserRaundStepNumber(userId, key)
+
+	//raund full point is level * 20
+
+	var level int
+	level, err = service.getUserRaundLevel(userId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	raundPoint := level * raundStartPoint
+
+	raundPoint = raundPoint - step
+
+	return raundPoint, err
+}
+
+func (service *ColorService) setUserRaundLevel(userId string, level int64) error {
+	data := make(map[string]interface{})
+
+	data[userId] = level
+
+	_, err := service.redisClient.HMSet("user-raund-level", data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
+	var result string
+	var err error
+	result, err = service.redisClient.HMGet("user-raund-level", userId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	return strconv.Atoi(result)
+}
+
+func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color, color *entity.Color) (*contract.ValidateColorsResponse, error) {
 	response := &contract.ValidateColorsResponse{}
 	var err error
+	var key string
 
-	//1. get user-id from client in http request header with key "Authorization" in JWT format.
-	//2. get code from client (code was sended to client in /colors response) in /validate request to calculate user point (client should send this guid in /validate request)
-	//3. increment user step number in every /validate request (store this data in redis        -> hmset user-step-number user-id "1234" guid "12s12-12sas-3asw12-12sa1" new-step-number "10")
+	var isColorsValid bool = false
+
+	// get code from client (code was sended to client in /colors response) in /validate request to calculate user point (client should send this guid in /validate request)
+	// validate raund key
+
+	key, err = service.getUserRaundKey(userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if key != sendedKey {
+		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
+	}
+
+	// validate sended color
+	allColors := append(colors, color)
+	isColorsValid, err = service.validateSendedColors(userId, key, allColors)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !isColorsValid {
+		return nil, types.NewBusinessException("invalid colors", "exp.invalidcolors")
+	}
+
+	// if step number is reached to max retry number, then game is over.
+
+	err = service.checkUserRaundStepNumber(userId, key)
+	if err != nil {
+		return nil, err
+	}
+	// increment user step number in every /validate request (store this data in redis        -> hmset user-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
+
+	err = service.updateUserRaundStepNumber(userId, key)
+	if err != nil {
+		return nil, err
+	}
 
 	isMatched := util.IsMatchedColors(colors, color)
 
 	if !isMatched {
-		//3.1.a if step number is reached to max retry number, then game is over.
+		// if step number is reached to max retry number, then game is over.
+
+		err = service.checkUserRaundStepNumber(userId, key)
+		if err != nil {
+
+			switch err.(type) {
+			case *types.GameOverException:
+				innerErr := service.setUserRaundPoint(userId, key, 0)
+				if innerErr != nil {
+					return nil, innerErr
+				}
+
+				innerErr = service.setUserTotalPoint(userId, key, 0)
+				if innerErr != nil {
+					return nil, innerErr
+				}
+			}
+
+			return nil, err
+		}
 	} else {
-		//3.2.a calculate point with generated point algorithm.
-		//3.2.b update user point if /validate endpoint return success code(store this data in redis   -> hmset user-point user-id "1234" guid "12s12-12sas-3asw12-12sa1" point "100")
+		// calculate point with generated point algorithm.
+		raundPoint, err := service.calculateUserRaundPoint(userId, key)
+		if err != nil {
+			return nil, err
+		}
+		// update user point
+		raundPoint = raundPoint + 1
+		err = service.setUserRaundPoint(userId, key, raundPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.updateUserTotalPoint(userId, key, raundPoint)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	response.IsValid = isMatched
