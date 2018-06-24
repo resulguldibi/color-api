@@ -9,7 +9,7 @@ import (
 var MaxStackDepth = 50
 
 type GameOverException struct {
-	*BaseException
+	*BusinessException
 }
 
 type BusinessException struct {
@@ -30,10 +30,10 @@ type ExceptionMessage struct {
 
 func NewGameOverException(message string, code string) *GameOverException {
 
-	a := &GameOverException{BaseException: &BaseException{}}
+	a := &GameOverException{BusinessException: &BusinessException{BaseException: &BaseException{}}}
 	x := errors.New(a)
 
-	e := &GameOverException{BaseException: &BaseException{}}
+	e := &GameOverException{BusinessException: &BusinessException{BaseException: &BaseException{}}}
 	e.message = message
 	e.code = code
 	e.base = x
@@ -54,12 +54,18 @@ func NewBusinessException(message string, code string) *BusinessException {
 }
 
 func (e *GameOverException) Error() string {
-	exp := &ExceptionMessage{Code: e.code, Message: e.message, Stack: string(e.base.Stack())}
-	expBytes, _ := json.Marshal(exp)
-	return string(expBytes)
+	return e.GetExceptionMessage()
 }
 
 func (e *BusinessException) Error() string {
+	return e.GetExceptionMessage()
+}
+
+func (e *BaseException) Error() string {
+	return e.GetExceptionMessage()
+}
+
+func (e *BaseException) GetExceptionMessage() string {
 	exp := &ExceptionMessage{Code: e.code, Message: e.message, Stack: string(e.base.Stack())}
 	expBytes, _ := json.Marshal(exp)
 	return string(expBytes)

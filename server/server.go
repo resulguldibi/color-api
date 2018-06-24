@@ -44,7 +44,9 @@ func NewServer() *gin.Engine {
 	})
 
 	server.GET("/ranking", func(ctx *gin.Context) {
-
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler.HandleRankings(ctx)
 	})
 
 	return server

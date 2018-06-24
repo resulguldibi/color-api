@@ -10,6 +10,19 @@ import (
 	"strconv"
 )
 
+/*
+
+hmget user-raund-key 12345
+hmget user-raund-level 12345
+hmget user-total-point 12345
+hmget user-raund-point 12345
+hmget user-raund-point "56dd5068-20ce-4f6d-845b-ea4990008bac"
+hmget user-raund-step-number 56dd5068-20ce-4f6d-845b-ea4990008bac
+hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
+
+
+*/
+
 const raundStartPoint int = 20
 
 func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
@@ -106,14 +119,21 @@ func (service *ColorService) setUserRaundKey(userId string, key string) error {
 	_, err := service.redisClient.HMSet("user-raund-key", data)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	return nil
 }
 
 func (service *ColorService) getUserRaundKey(userId string) (string, error) {
-	return service.redisClient.HMGet("user-raund-key", userId)
+
+	response, err := service.redisClient.HMGet("user-raund-key", userId)
+
+	if err != nil {
+		return response, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return response, err
 }
 
 func (service *ColorService) setUserRaundGeneratedRandomColors(key string, colors []*entity.Color) error {
@@ -122,7 +142,7 @@ func (service *ColorService) setUserRaundGeneratedRandomColors(key string, color
 	colorBytes, err := json.Marshal(colors)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	data[key] = string(colorBytes)
@@ -130,7 +150,7 @@ func (service *ColorService) setUserRaundGeneratedRandomColors(key string, color
 	_, err = service.redisClient.HMSet("user-raund-generated-random-colors", data)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	return nil
@@ -141,7 +161,7 @@ func (service *ColorService) deleteUserExistingRaundGeneratedRandomColors(key st
 	_, err := service.redisClient.HDel("user-raund-generated-random-colors", key)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	return nil
@@ -152,12 +172,16 @@ func (service *ColorService) getUserRaundGeneratedRandomColors(key string) ([]*e
 	result, err := service.redisClient.HMGet("user-raund-generated-random-colors", key)
 
 	if err != nil {
-		return nil, err
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	actualColors := []*entity.Color{}
 
 	err = json.Unmarshal([]byte(result), &actualColors)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
 
 	return actualColors, err
 }
@@ -221,6 +245,10 @@ func (service *ColorService) setUserRaundStepNumber(userId string, key string, s
 
 	_, err := service.redisClient.HMSet("user-raund-step-number", data)
 
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
 	return err
 
 }
@@ -230,7 +258,7 @@ func (service *ColorService) getUserRaundStepNumber(userId string, key string) (
 	result, err := service.redisClient.HMGet("user-raund-step-number", key)
 
 	if err != nil {
-		return 0, err
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if result == "" {
@@ -239,16 +267,31 @@ func (service *ColorService) getUserRaundStepNumber(userId string, key string) (
 
 	step, err := strconv.Atoi(result)
 
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
 	return step, err
 
 }
 
 func (service *ColorService) checkUserRaundStepNumber(userId string, key string) error {
 
-	var maxStep int = 3
+	var maxStep int
+	var err error
+	var level int
+
+	level, err = service.getUserRaundLevel(userId)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	maxStep = level * raundStartPoint
+
 	step, err := service.getUserRaundStepNumber(userId, key)
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if step >= maxStep {
@@ -264,7 +307,7 @@ func (service *ColorService) getUserRaundPoint(userId string, key string) (int, 
 	result, err := service.redisClient.HMGet("user-raund-point", key)
 
 	if err != nil {
-		return 0, err
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if result == "" {
@@ -272,6 +315,10 @@ func (service *ColorService) getUserRaundPoint(userId string, key string) (int, 
 	}
 
 	point, err := strconv.Atoi(result)
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
 
 	return point, err
 }
@@ -285,17 +332,21 @@ func (service *ColorService) setUserRaundPoint(userId string, key string, point 
 
 	_, err := service.redisClient.HMSet("user-raund-point", data)
 
-	return err
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
 }
 
-func (service *ColorService) getUserTotalPoint(userId string, key string) (int, error) {
+func (service *ColorService) getUserTotalPoint(userId string) (int, error) {
 
 	// hmget user-raund-point "12s12-12sas-3asw12-12sa1"
 
-	result, err := service.redisClient.HMGet("user-total-point", key)
+	result, err := service.redisClient.HMGet("user-total-point", userId)
 
 	if err != nil {
-		return 0, err
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if result == "" {
@@ -304,36 +355,47 @@ func (service *ColorService) getUserTotalPoint(userId string, key string) (int, 
 
 	point, err := strconv.Atoi(result)
 
-	return point, err
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return point, nil
 }
 
-func (service *ColorService) setUserTotalPoint(userId string, key string, point int) error {
-	//hmset user-raund-point "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "100"
+func (service *ColorService) setUserTotalPoint(userId string, point int) error {
+	//hmset user-raund-point "1234" "100"
 	data := make(map[string]interface{})
 
-	data[userId] = key
-	data[key] = point
+	data[userId] = point
 
 	_, err := service.redisClient.HMSet("user-total-point", data)
 
-	return err
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
 }
 
-func (service *ColorService) updateUserTotalPoint(userId string, key string, pointToAdd int) error {
+func (service *ColorService) updateUserTotalPoint(userId string, pointToAdd int) error {
 
-	//hmset user-raund-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
+	//hmset user-raund-point "1234" "100"
 
-	totalPoint, err := service.getUserTotalPoint(userId, key)
+	totalPoint, err := service.getUserTotalPoint(userId)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	totalPoint = totalPoint + pointToAdd
 
-	err = service.setUserTotalPoint(userId, key, totalPoint)
+	err = service.setUserTotalPoint(userId, totalPoint)
 
-	return err
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
 }
 
 func (service *ColorService) calculateUserRaundPoint(userId string, key string) (int, error) {
@@ -347,14 +409,14 @@ func (service *ColorService) calculateUserRaundPoint(userId string, key string) 
 	level, err = service.getUserRaundLevel(userId)
 
 	if err != nil {
-		return 0, err
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	raundPoint := level * raundStartPoint
 
 	raundPoint = raundPoint - step
 
-	return raundPoint, err
+	return raundPoint, nil
 }
 
 func (service *ColorService) setUserRaundLevel(userId string, level int64) error {
@@ -365,7 +427,7 @@ func (service *ColorService) setUserRaundLevel(userId string, level int64) error
 	_, err := service.redisClient.HMSet("user-raund-level", data)
 
 	if err != nil {
-		return err
+		return types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	return nil
@@ -377,14 +439,20 @@ func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
 	result, err = service.redisClient.HMGet("user-raund-level", userId)
 
 	if err != nil {
-		return 0, err
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if result == "" {
 		result = "0"
 	}
 
-	return strconv.Atoi(result)
+	level, err := strconv.Atoi(result)
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return level, nil
 }
 
 func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color, color *entity.Color) (*contract.ValidateColorsResponse, error) {
@@ -400,7 +468,7 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 	key, err = service.getUserRaundKey(userId)
 
 	if err != nil {
-		return nil, err
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
 	}
 
 	if key != sendedKey {
@@ -447,7 +515,7 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 					return nil, innerErr
 				}
 
-				innerErr = service.setUserTotalPoint(userId, key, 0)
+				innerErr = service.setUserTotalPoint(userId, 0)
 				if innerErr != nil {
 					return nil, innerErr
 				}
@@ -468,12 +536,47 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 			return nil, err
 		}
 
-		err = service.updateUserTotalPoint(userId, key, raundPoint)
+		err = service.updateUserTotalPoint(userId, raundPoint)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	response.IsValid = isMatched
+	return response, err
+}
+
+func (service *ColorService) GetRankings(userId string, sendedKey string) (*contract.GetRankingResponse, error) {
+	response := &contract.GetRankingResponse{}
+	var err error
+	var key string
+	var raundPoint int
+	var totalPoint int
+
+	key, err = service.getUserRaundKey(userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if key != sendedKey {
+		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
+	}
+
+	raundPoint, err = service.getUserRaundPoint(userId, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	totalPoint, err = service.getUserTotalPoint(userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response.RaundPoint = raundPoint
+	response.TotalPoint = totalPoint
+
 	return response, err
 }

@@ -18,3 +18,11 @@ type ValidateColorsRequest struct {
 	MixedColor     *entity.Color   `json:"mixedColor"`
 	SelectedColors []*entity.Color `json:"selectedColors"`
 }
+
+type GetRankingResponse struct {
+	RaundPoint int `json:"raundPoint"`
+	TotalPoint int `json:"totalPoint"`
+}
+
+type GetRankingRequest struct {
+}
