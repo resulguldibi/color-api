@@ -19,6 +19,18 @@ type ValidateColorsRequest struct {
 	SelectedColors []*entity.Color `json:"selectedColors"`
 }
 
+type GetGoogleOAuthTokenRequest struct {
+	Token string `json:"token"`
+}
+
+type GetGoogleOAuthTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	IdToken      string `json:"id_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+}
+
 type GetRankingResponse struct {
 	RaundPoint int `json:"raundPoint"`
 	TotalPoint int `json:"totalPoint"`

@@ -41,7 +41,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 }
 
 func isAuthorizationRequired(path string) bool {
-	unAuthoriziedPaths := []string{"/signin", "/signup"}
+	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token"}
 	var isAuthorizationRequired bool = true
 	if unAuthoriziedPaths != nil && len(unAuthoriziedPaths) > 0 && path != "" {
 		for _, unAuthoriziedPath := range unAuthoriziedPaths {

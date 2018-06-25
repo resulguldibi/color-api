@@ -7,6 +7,7 @@ import (
 	"resulguldibi/color-api/repository"
 	"resulguldibi/color-api/service"
 
+	httpClientFactory "resulguldibi/http-client/factory"
 	redisClientFactory "resulguldibi/redis-client/factory"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,8 @@ func NewServer() *gin.Engine {
 	//TODO : get connection info from config
 	dbClientFactory := repository.NewDbClientFactory("sqlite3", "./SQLiteDB.db")
 	redisClientFactory := redisClientFactory.NewRedisClientFactory("localhost:6379", "")
+
+	httpClientFactory := httpClientFactory.NewHttpClientFactory()
 
 	server.GET("/colors", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
@@ -38,9 +41,9 @@ func NewServer() *gin.Engine {
 
 	})
 
-	server.POST("/signin", func(ctx *gin.Context) {
-		userHandler := handler.NewUserHandler(service.NewUserService(redisClientFactory.GetRedisClient()))
-		userHandler.HandleSignIn(ctx)
+	server.POST("/google/oauth2/token", func(ctx *gin.Context) {
+		userHandler := handler.NewUserHandler(service.NewUserServiceWithHttpClient(redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
+		userHandler.HandleOAuth2Google(ctx)
 	})
 
 	server.GET("/ranking", func(ctx *gin.Context) {

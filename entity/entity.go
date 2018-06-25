@@ -24,6 +24,18 @@ type User struct {
 	jwt.StandardClaims
 }
 
+type GoogleUser struct {
+	Id           string `json:"sub"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	IsValidEmail bool   `json:"email_verified"`
+
+	FirstName string `json:"given_name"`
+	LastName  string `json:"family_name"`
+
+	jwt.StandardClaims
+}
+
 type UserRaundStepNumber struct {
 	Step int `json:"step"`
 }

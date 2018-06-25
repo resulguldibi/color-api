@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"net/http"
 	"resulguldibi/color-api/entity"
+	"resulguldibi/color-api/types"
 
+	"github.com/gin-gonic/gin"
 	"github.com/satori/go.uuid"
 )
 
@@ -15,6 +17,13 @@ func CheckErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func HandleErr(ctx *gin.Context, err interface{}) {
+	exp := &types.ExceptionMessage{}
+	_ = json.Unmarshal([]byte(fmt.Sprint(err)), exp)
+	responseSatus := PrepareResponseStatusWithMessage(false, exp.Message, exp.Code, exp.Stack)
+	ctx.JSON(http.StatusBadRequest, responseSatus)
 }
 
 func PrepareResponse(w http.ResponseWriter, data interface{}) {

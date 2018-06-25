@@ -17,10 +17,7 @@ func (handler ColorHandler) HandleGetRandomColors(ctx *gin.Context) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			exp := &types.ExceptionMessage{}
-			_ = json.Unmarshal([]byte(fmt.Sprint(err)), exp)
-			responseSatus := util.PrepareResponseStatusWithMessage(false, exp.Message, exp.Code, exp.Stack)
-			ctx.JSON(http.StatusBadRequest, responseSatus)
+			util.HandleErr(ctx, err)
 		}
 	}()
 
@@ -44,10 +41,7 @@ func (handler ColorHandler) HandleValidateColors(ctx *gin.Context) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			exp := &types.ExceptionMessage{}
-			_ = json.Unmarshal([]byte(fmt.Sprint(err)), exp)
-			responseSatus := util.PrepareResponseStatusWithMessage(false, exp.Message, exp.Code, exp.Stack)
-			ctx.JSON(http.StatusBadRequest, responseSatus)
+			util.HandleErr(ctx, err)
 		}
 	}()
 
@@ -75,10 +69,7 @@ func (handler ColorHandler) HandleRankings(ctx *gin.Context) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			exp := &types.ExceptionMessage{}
-			_ = json.Unmarshal([]byte(fmt.Sprint(err)), exp)
-			responseSatus := util.PrepareResponseStatusWithMessage(false, exp.Message, exp.Code, exp.Stack)
-			ctx.JSON(http.StatusBadRequest, responseSatus)
+			util.HandleErr(ctx, err)
 		}
 	}()
 
