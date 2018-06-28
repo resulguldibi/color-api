@@ -28,7 +28,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 			})
 
 			if err != nil {
-				panic(err)
+				c.AbortWithError(http.StatusUnauthorized, errors.New("Invalid Authorization"))
 			}
 
 			if token.Valid {
