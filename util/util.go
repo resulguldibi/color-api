@@ -8,9 +8,14 @@ import (
 	"net/http"
 	"resulguldibi/color-api/entity"
 	"resulguldibi/color-api/types"
+	"strings"
+
+	b64 "encoding/base64"
 
 	"github.com/gin-gonic/gin"
 	"github.com/satori/go.uuid"
+
+	httpClient "resulguldibi/http-client/entity"
 )
 
 func CheckErr(err error) {
@@ -132,4 +137,99 @@ func IsMatchedColors(colors []*entity.Color, color *entity.Color) bool {
 	mixedColor := GenerateMixColor(colors)
 	isValid := IsColorsEquals(mixedColor, color)
 	return isValid
+}
+
+func DecodeBase64(encodeData string) ([]byte, error) {
+	encodeData = strings.Replace(encodeData, "-", "+", -1)
+	encodeData = strings.Replace(encodeData, "_", "/", -1)
+	res, _ := b64.RawStdEncoding.DecodeString(encodeData)
+	//res, _ := b64.StdEncoding.DecodeString(encodeData)
+
+	return res, nil
+}
+
+func GetBase64PayloadFromJWT(jwtToken string) string {
+	res := strings.Split(jwtToken, ".")[1]
+	return res
+}
+
+func GetGoogleIdTokenSignKey(httpClient httpClient.IHttpClient, idToken string) (string, error) {
+
+	var googleOpenIDOAuthCertKey *entity.GoogleOpenIDOAuthCertKey
+	googleJWTHeader, err := GetGoogleIdTokenHeaderInfo(idToken)
+	if err != nil {
+		return "", err
+	}
+
+	googleOpenIDOAuthCertKey, err = GetGoogleOpenIDOAuthCertKey(httpClient, googleJWTHeader)
+
+	if googleOpenIDOAuthCertKey == nil {
+		return "", types.NewBusinessException("google idtoken sign key exception", "exp.google.id.token.sign.key")
+	}
+
+	return googleOpenIDOAuthCertKey.N, nil
+}
+
+func GetGoogleIdTokenHeaderInfo(idToken string) (*entity.GoogleJWTHeader, error) {
+	jwtToken := GetJWTTokenInfo(idToken)
+	googleJWTHeader := &entity.GoogleJWTHeader{}
+
+	headerBytes, err := DecodeBase64(jwtToken.Header)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(headerBytes, googleJWTHeader)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return googleJWTHeader, nil
+}
+
+func GetJWTTokenInfo(jwtToken string) *entity.JWTToken {
+	segments := strings.Split(jwtToken, ".")
+	return &entity.JWTToken{Header: segments[0], Payload: segments[1], Signature: segments[2]}
+}
+
+func GetGoogleOpenIDConfiguration(httpClient httpClient.IHttpClient) (*entity.GoogleOpenIDConfiguration, error) {
+	conf := &entity.GoogleOpenIDConfiguration{}
+	err := httpClient.Get("https://accounts.google.com/.well-known/openid-configuration").EndStruct(conf)
+	return conf, err
+}
+
+func GetGoogleOpenIDOAuthCertKey(httpClient httpClient.IHttpClient, jwtHeader *entity.GoogleJWTHeader) (*entity.GoogleOpenIDOAuthCertKey, error) {
+
+	var googleOpenIDOAuthCertKey *entity.GoogleOpenIDOAuthCertKey
+	googleOpenIDOAuthCertResponse, err := GetGoogleOpenIDOAuthCerts(httpClient)
+
+	if err != nil {
+		return nil, err
+	}
+
+	googleOpenIDOAuthCertKey = FindGoogleOpenIDOAuthCertKey(googleOpenIDOAuthCertResponse.Keys, jwtHeader)
+
+	return googleOpenIDOAuthCertKey, nil
+}
+
+func GetGoogleOpenIDOAuthCerts(httpClient httpClient.IHttpClient) (*entity.GoogleOpenIDOAuthCertResponse, error) {
+	conf, err := GetGoogleOpenIDConfiguration(httpClient)
+	certResponse := &entity.GoogleOpenIDOAuthCertResponse{}
+	err = httpClient.Get(conf.JwksUri).EndStruct(certResponse)
+	return certResponse, err
+}
+
+func FindGoogleOpenIDOAuthCertKey(certList []*entity.GoogleOpenIDOAuthCertKey, jwtHeader *entity.GoogleJWTHeader) *entity.GoogleOpenIDOAuthCertKey {
+	var foundCert *entity.GoogleOpenIDOAuthCertKey
+	if certList != nil && len(certList) > 0 {
+		for _, cert := range certList {
+			if cert.Alg == jwtHeader.Alg && cert.Kid == jwtHeader.KID {
+				foundCert = cert
+				break
+			}
+		}
+	}
+	return foundCert
 }

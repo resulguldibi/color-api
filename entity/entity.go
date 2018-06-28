@@ -36,6 +36,35 @@ type GoogleUser struct {
 	jwt.StandardClaims
 }
 
+type JWTToken struct {
+	Header    string
+	Payload   string
+	Signature string
+}
+
+type GoogleJWTHeader struct {
+	Alg string `json:"alg"`
+	KID string `json:"kid"`
+}
+
+type GoogleOpenIDConfiguration struct {
+	Issuer  string `json:"issuer"`
+	JwksUri string `json:"jwks_uri"`
+}
+
+type GoogleOpenIDOAuthCertResponse struct {
+	Keys []*GoogleOpenIDOAuthCertKey `json:"keys"`
+}
+
+type GoogleOpenIDOAuthCertKey struct {
+	Kty string `json:"kty"`
+	Alg string `json:"alg"`
+	Use string `json:"use"`
+	Kid string `json:"kid"`
+	N   string `json:"n"`
+	E   string `json:"e"`
+}
+
 type UserRaundStepNumber struct {
 	Step int `json:"step"`
 }
