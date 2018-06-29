@@ -25,6 +25,16 @@ hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
 
 const raundStartPoint int = 20
 
+func (service *ColorService) GetLevels() (*contract.GetLevelResponse, error) {
+	response := &contract.GetLevelResponse{}
+	var err error
+
+	response.LevelCount = 5
+	response.DefaultLevel = 2
+
+	return response, err
+}
+
 func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
 	response := &contract.GetColorResponse{}
 	var err error
@@ -81,6 +91,12 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 		panic(err)
 	}
 
+	err = service.setUserRaundGeneratedMixedColor(code, mixedColor)
+
+	if err != nil {
+		panic(err)
+	}
+
 	//update user point calculation key with this guid (store this data in redis -> hmset user-raund "1234" "12s12-12sas-3asw12-12sa1")
 
 	var existingKey string
@@ -91,7 +107,7 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	}
 
 	if existingKey != "" {
-		err = service.deleteUserExistingRaundGeneratedRandomColors(existingKey)
+		err = service.deleteExistingKeyRelatedData(existingKey)
 		if err != nil {
 			panic(err)
 		}
@@ -117,6 +133,17 @@ func (service *ColorService) setUserRaundKey(userId string, key string) error {
 	data[userId] = key
 
 	_, err := service.redisClient.HMSet("user-raund-key", data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserRaundKey(userId string) error {
+
+	_, err := service.redisClient.HDel("user-raund-key", userId)
 
 	if err != nil {
 		return types.NewBusinessException("system exception", "exp.systemexception")
@@ -156,9 +183,95 @@ func (service *ColorService) setUserRaundGeneratedRandomColors(key string, color
 	return nil
 }
 
+func (service *ColorService) setUserRaundGeneratedMixedColor(key string, color *entity.Color) error {
+	data := make(map[string]interface{})
+
+	colorBytes, err := json.Marshal(color)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	data[key] = string(colorBytes)
+
+	_, err = service.redisClient.HMSet("user-raund-generated-mixed-color", data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundGeneratedMixedColor(key string) (*entity.Color, error) {
+
+	result, err := service.redisClient.HMGet("user-raund-generated-mixed-color", key)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	mixedColor := &entity.Color{}
+
+	err = json.Unmarshal([]byte(result), mixedColor)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return mixedColor, err
+}
+
+func (service *ColorService) deleteExistingKeyRelatedData(key string) error {
+
+	err := service.deleteUserExistingRaundGeneratedRandomColors(key)
+
+	err = service.deleteUserExistingRaundGeneratedMixedColor(key)
+
+	err = service.deleteUserExistingRaundStepNumber(key)
+
+	err = service.deleteUserExistingRaundPoint(key)
+
+	return err
+
+}
+
 func (service *ColorService) deleteUserExistingRaundGeneratedRandomColors(key string) error {
 
 	_, err := service.redisClient.HDel("user-raund-generated-random-colors", key)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserExistingRaundGeneratedMixedColor(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-generated-mixed-color", key)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserExistingRaundStepNumber(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-step-number", key)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserExistingRaundPoint(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-point", key)
 
 	if err != nil {
 		return types.NewBusinessException("system exception", "exp.systemexception")
@@ -455,7 +568,7 @@ func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
 	return level, nil
 }
 
-func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color, color *entity.Color) (*contract.ValidateColorsResponse, error) {
+func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color) (*contract.ValidateColorsResponse, error) {
 	response := &contract.ValidateColorsResponse{}
 	var err error
 	var key string
@@ -475,8 +588,16 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
 	}
 
+	var mixedColor *entity.Color
+	mixedColor, err = service.getUserRaundGeneratedMixedColor(key)
+
+	if err != nil {
+		return nil, err
+	}
+
 	// validate sended color
-	allColors := append(colors, color)
+	allColors := append(colors, mixedColor)
+
 	isColorsValid, err = service.validateSendedColors(userId, key, allColors)
 
 	if err != nil {
@@ -500,7 +621,7 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 		return nil, err
 	}
 
-	isMatched := util.IsMatchedColors(colors, color)
+	isMatched := util.IsMatchedColors(colors, mixedColor)
 
 	if !isMatched {
 		// if step number is reached to max retry number, then game is over.
@@ -524,6 +645,7 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 			return nil, err
 		}
 	} else {
+
 		// calculate point with generated point algorithm.
 		raundPoint, err := service.calculateUserRaundPoint(userId, key)
 		if err != nil {
@@ -543,6 +665,29 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 	}
 
 	response.IsValid = isMatched
+	totalPoint, err := service.getUserTotalPoint(userId)
+	if err == nil {
+		response.TotalPoint = totalPoint
+	}
+
+	raundPoint, err := service.getUserRaundPoint(userId, key)
+	if err == nil {
+		response.RaundPoint = raundPoint
+	}
+
+	if isMatched {
+		err = service.deleteUserRaundKey(userId)
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.deleteExistingKeyRelatedData(key)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return response, err
 }
 

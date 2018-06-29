@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"resulguldibi/color-api/entity"
@@ -32,6 +34,12 @@ func UseUserMiddleware() gin.HandlerFunc {
 			}
 
 			if token.Valid {
+				userJson, err := json.Marshal(user)
+				if err != nil {
+					c.AbortWithError(http.StatusUnauthorized, errors.New("Invalid Authorization"))
+				}
+
+				fmt.Println("user ->", string(userJson))
 				c.Set("User", user)
 			}
 		}

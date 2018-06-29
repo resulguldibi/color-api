@@ -37,6 +37,19 @@ func (handler ColorHandler) HandleGetRandomColors(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+func (handler ColorHandler) HandleGetLevels(ctx *gin.Context) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			util.HandleErr(ctx, err)
+		}
+	}()
+
+	response, err := handler.colorService.GetLevels()
+	util.CheckErr(err)
+	ctx.JSON(http.StatusOK, response)
+}
+
 func (handler ColorHandler) HandleValidateColors(ctx *gin.Context) {
 
 	defer func() {
@@ -54,7 +67,7 @@ func (handler ColorHandler) HandleValidateColors(ctx *gin.Context) {
 		if isExist {
 			user = userData.(entity.User)
 		}
-		response, err := handler.colorService.ValidateColors(user.Id, key, request.SelectedColors, request.MixedColor)
+		response, err := handler.colorService.ValidateColors(user.Id, key, request.SelectedColors)
 		util.CheckErr(err)
 		ctx.JSON(http.StatusOK, response)
 	} else {

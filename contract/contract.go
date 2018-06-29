@@ -10,12 +10,18 @@ type GetColorResponse struct {
 	Code         string          `json:"code"`
 }
 
+type GetLevelResponse struct {
+	LevelCount   int `json:"levelCount"`
+	DefaultLevel int `json:"defaultLevel"`
+}
+
 type ValidateColorsResponse struct {
-	IsValid bool `json:"isValid"`
+	IsValid    bool `json:"isValid"`
+	RaundPoint int  `json:"raundPoint"`
+	TotalPoint int  `json:"totalPoint"`
 }
 
 type ValidateColorsRequest struct {
-	MixedColor     *entity.Color   `json:"mixedColor"`
 	SelectedColors []*entity.Color `json:"selectedColors"`
 }
 

@@ -31,14 +31,16 @@ func NewServer() *gin.Engine {
 		colorHandler.HandleGetRandomColors(ctx)
 	})
 
+	server.GET("/levels", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler.HandleGetLevels(ctx)
+	})
+
 	server.POST("/validate", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
 		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
 		colorHandler.HandleValidateColors(ctx)
-	})
-
-	server.POST("/signup", func(ctx *gin.Context) {
-
 	})
 
 	server.POST("/google/oauth2/token", func(ctx *gin.Context) {
