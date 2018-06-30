@@ -17,7 +17,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 
 		authorization := c.Request.Header.Get("Authorization")
 
-		if isAuthorizationRequired(c.Request.URL.Path) {
+		if isAuthorizationRequired(c.Request.URL.Path) && isAuthorizationEnabled() {
 
 			// get user-id from client in http request header with key "Authorization" in JWT format
 			if authorization == "" {
@@ -49,7 +49,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 }
 
 func isAuthorizationRequired(path string) bool {
-	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token"}
+	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token", "/google/oauth2", "/favicon.ico", "/"}
 	var isAuthorizationRequired bool = true
 	if unAuthoriziedPaths != nil && len(unAuthoriziedPaths) > 0 && path != "" {
 		for _, unAuthoriziedPath := range unAuthoriziedPaths {
@@ -61,4 +61,8 @@ func isAuthorizationRequired(path string) bool {
 	}
 
 	return isAuthorizationRequired
+}
+
+func isAuthorizationEnabled() bool {
+	return true
 }

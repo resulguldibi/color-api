@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net/http"
 	"resulguldibi/color-api/factory"
 	"resulguldibi/color-api/handler"
 	"resulguldibi/color-api/middleware"
@@ -24,6 +25,12 @@ func NewServer() *gin.Engine {
 	redisClientFactory := redisClientFactory.NewRedisClientFactory("localhost:6379", "")
 
 	httpClientFactory := httpClientFactory.NewHttpClientFactory()
+
+	server.LoadHTMLGlob("static/html/*.html")
+
+	server.GET("/google/oauth2", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "googleoauth2.html", nil)
+	})
 
 	server.GET("/colors", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()

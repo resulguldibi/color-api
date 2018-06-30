@@ -20,7 +20,7 @@ func (service *UserService) GetGoogleOAuthTokenResponse(googleOAuht2token string
 	data.Add("code", googleOAuht2token)
 	data.Add("client_id", os.Getenv("COLOR_API_GOOGLE_CLIENT_ID"))
 	data.Add("client_secret", os.Getenv("COLOR_API_GOOGLE_CLIENT_SECRET"))
-	data.Add("redirect_uri", "http://localhost")
+	data.Add("redirect_uri", os.Getenv("COLOR_API_GOOGLE_REDIRECT_URI"))
 	data.Add("grant_type", "authorization_code")
 
 	googleTokenResponse := &contract.GetGoogleOAuthTokenResponse{}
