@@ -25,11 +25,27 @@ hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
 
 const raundStartPoint int = 20
 
+func (service *ColorService) GetColorHelp(userId string, key string) (*contract.GetColorHelpResponse, error) {
+	response := &contract.GetColorHelpResponse{}
+	var err error
+	var selectedColors []*entity.Color
+
+	selectedColors, err = service.getUserRaundGeneratedSelectedColors(key)
+
+	if err != nil {
+		panic(err)
+	}
+
+	response.SelectedColors = selectedColors
+
+	return response, err
+}
+
 func (service *ColorService) GetLevels() (*contract.GetLevelResponse, error) {
 	response := &contract.GetLevelResponse{}
 	var err error
 
-	response.LevelCount = 5
+	response.LevelCount = 4
 	response.DefaultLevel = 2
 
 	return response, err
@@ -41,12 +57,14 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	var count int64 = 5*level + 1
 
 	randomColors := make([]*entity.Color, 0, count)
+	selectedColors := make([]*entity.Color, 0, level)
 
 	for i := int64(0); i < level; i++ {
 		randomColor := util.GenerateRandomColor()
 		if !util.IsColorExist(randomColors, randomColor) {
 			randomColor.IsSelected = true
 			randomColors = append(randomColors, randomColor)
+			selectedColors = append(selectedColors, randomColor)
 		}
 	}
 
@@ -83,6 +101,27 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
 	response.Code = code
+	response.RaundStartPoint = int(level) * raundStartPoint
+	var totalPoint int
+	totalPoint, err = service.getUserTotalPoint(userId)
+
+	if err != nil {
+		panic(err)
+	}
+
+	response.TotalPoint = totalPoint
+
+	err = service.setUserRaundPoint(userId, code, int(response.RaundStartPoint))
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = service.setUserRaundGeneratedSelectedColors(code, selectedColors)
+
+	if err != nil {
+		panic(err)
+	}
 
 	//save generated random colors to use in /validate endpoint
 	allColors := append(finalRandomColors, mixedColor)
@@ -163,6 +202,45 @@ func (service *ColorService) getUserRaundKey(userId string) (string, error) {
 	return response, err
 }
 
+func (service *ColorService) setUserRaundGeneratedSelectedColors(key string, colors []*entity.Color) error {
+	data := make(map[string]interface{})
+
+	colorBytes, err := json.Marshal(colors)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	data[key] = string(colorBytes)
+
+	_, err = service.redisClient.HMSet("user-raund-generated-selected-colors", data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundGeneratedSelectedColors(key string) ([]*entity.Color, error) {
+
+	result, err := service.redisClient.HMGet("user-raund-generated-selected-colors", key)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	actualColors := []*entity.Color{}
+
+	err = json.Unmarshal([]byte(result), &actualColors)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return actualColors, err
+}
+
 func (service *ColorService) setUserRaundGeneratedRandomColors(key string, colors []*entity.Color) error {
 	data := make(map[string]interface{})
 
@@ -232,6 +310,8 @@ func (service *ColorService) deleteExistingKeyRelatedData(key string) error {
 
 	err = service.deleteUserExistingRaundPoint(key)
 
+	err = service.deleteUserExistingRaundGeneratedSelectedColors(key)
+
 	return err
 
 }
@@ -239,6 +319,17 @@ func (service *ColorService) deleteExistingKeyRelatedData(key string) error {
 func (service *ColorService) deleteUserExistingRaundGeneratedRandomColors(key string) error {
 
 	_, err := service.redisClient.HDel("user-raund-generated-random-colors", key)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserExistingRaundGeneratedSelectedColors(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-generated-selected-colors", key)
 
 	if err != nil {
 		return types.NewBusinessException("system exception", "exp.systemexception")
@@ -410,6 +501,13 @@ func (service *ColorService) checkUserRaundStepNumber(userId string, key string)
 	if step >= maxStep {
 		return types.NewGameOverException("max retry count reached", "exp.maxretrycountreached")
 	}
+
+	err = service.setUserRaundPoint(userId, key, maxStep-step)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
 	return nil
 }
 

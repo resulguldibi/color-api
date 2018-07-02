@@ -21,6 +21,7 @@ type User struct {
 	FirstName string `json:"fname"`
 	LastName  string `json:"lname"`
 	Email     string `json:"email"`
+	Picture   string `json:"picture"`
 	jwt.StandardClaims
 }
 
@@ -32,6 +33,7 @@ type GoogleUser struct {
 
 	FirstName string `json:"given_name"`
 	LastName  string `json:"family_name"`
+	Picture   string `json:"picture"`
 
 	jwt.StandardClaims
 }

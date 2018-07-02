@@ -37,6 +37,7 @@
 <script>
 function signInCallback(authResult) {
 	console.log(JSON.stringify(authResult))	
+  window.localStorage.setItem("googleToken", authResult.code)
 }
 
 </script>

@@ -1,0 +1,229 @@
+.resultPanel{
+    width: 224px;
+    height: 100px;
+    margin: auto;
+    padding-bottom: 10px;
+    padding-top: 10px;
+}
+
+.pnlResult{
+    margin: auto;
+    font-weight: bold;
+    font-size:40px;
+    color: #adadad;
+}
+
+.pnlTotalPoint{
+    margin: auto;
+    font-weight: bold;
+    font-size: 43px;
+    float: left;
+    padding-left: 20px;
+    color: #adadad;
+}
+
+.imgResultHappy{
+    width: 40px;
+    height: 40px;
+}
+
+.imgResultAngry {
+    width: 40px;
+    height: 40px;
+}
+
+.imgResultHelp {
+    width: 40px;
+    height: 40px;
+}
+
+.pnlUser{
+    float: right;   
+}
+
+.imgUserPicture{
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    margin: 10px;
+}
+
+
+
+.fLeft{
+    float: left
+}
+.pnlStepNumber{
+    margin: auto;
+    font-weight: bold;
+    font-size:40px;
+    color: #adadad;
+}
+
+.pnlSettings{
+    width: 400px;
+    height: 100px;
+    margin: auto;
+    padding-bottom: 20px;
+    padding-top:50px;
+}
+
+.pnlRefreshSettingsContainer{
+    float:left;
+    margin-right:10px;
+}
+
+.pnlRefreshSettings {
+    width:100px;
+    height:50px;
+    cursor:pointer;
+}
+
+.pnlLevelContainer{
+    float:left;
+    margin-right:10px;
+}
+
+.slctLevel{
+    width:100px;
+    height:50px;
+    padding:5px;
+}
+
+.pnlHelpContainer{
+    float:left;
+}
+
+.btnHelp{
+    width:40px;
+    height:50px;
+    cursor:pointer;
+}
+
+.clear{
+    clear: both;
+}
+
+.pnlMainColor{
+    width: 112px;
+    height: 100px;
+    margin: auto;
+    padding-bottom: 20px;
+    padding-top:50px;
+}
+
+.actualColor {
+    float: left;
+    clear: both;
+    width: 100px;
+    height: 100px;
+    border: 1px double black;
+    margin: 0px 10px 0px 0px;
+    border-radius: 50%;
+}
+
+.mixColor {
+    float: left;
+    width: 100px;
+    height: 100px;
+    border: 1px double black;
+    border-radius: 50%;
+}
+
+.level1RandomContainer {
+    width: 650px;
+    height: 100px;
+    margin: auto;
+    margin-top: 30px;
+}
+
+.level2RandomContainer {
+    width: 1220px;
+    height: 100px;
+    margin: auto;
+    margin-top: 30px;
+}
+
+.level3RandomContainer {
+    width: 1220px;
+    height: 100px;
+    margin: auto;
+    margin-top: 30px;
+}
+
+.level4RandomContainer {
+    width: 1220px;
+    height: 100px;
+    margin: auto;
+    margin-top: 30px;
+}
+
+.level1RandomColor {
+    float: left;
+    width: 120px;
+    height: 120px;
+    margin: 0px 10px 0px 0px;
+    border: 1px double black;
+    border-radius: 50%;
+}
+
+.level2RandomColor {
+    float: left;
+    width: 100px;
+    height: 100px;
+    margin: 0px 10px 0px 0px;
+    border: 1px double black;
+    border-radius: 50%
+}
+
+.level3RandomColor {
+    float: left;
+    width: 66px;
+    height: 66px;
+    margin: 0px 10px 0px 0px;
+    border: 1px double black;
+    border-radius: 50%
+}
+
+.level4RandomColor {
+    float: left;
+    width: 50px;
+    height: 50px;
+    margin: 0px 10px 0px 0px;
+    border: 1px double black;
+    border-radius: 50%
+}
+
+.level1Container {
+    float: left;
+    width: 120px;
+    height: 120px;
+    margin: 0px 10px 0px 0px;
+    cursor: pointer;
+}
+
+.level2Container {
+    float: left;
+    width: 102px;
+    height: 102px;
+    margin: 0px 10px 0px 0px;
+    cursor: pointer;
+}
+
+.level3Container {
+    float: left;
+    width: 68px;
+    height: 68px;
+    margin: 0px 10px 0px 0px;
+    cursor: pointer;
+}
+
+.level4Container {
+    float: left;
+    width: 51px;
+    height: 51px;
+    margin: 0px 10px 0px 0px;
+    cursor: pointer;
+}

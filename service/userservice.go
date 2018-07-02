@@ -55,6 +55,7 @@ func (service *UserService) GetGoogleOAuthTokenResponse(googleOAuht2token string
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
+		Picture:   user.Picture,
 	})
 	// token -> string. Only server knows this secret (foobar).
 	tokenstring, err = token.SignedString([]byte(os.Getenv("COLOR_API_JWT_KEY")))

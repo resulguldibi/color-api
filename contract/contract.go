@@ -5,14 +5,20 @@ import (
 )
 
 type GetColorResponse struct {
-	MixedColor   *entity.Color   `json:"mixedColor"`
-	RandomColors []*entity.Color `json:"randomColors"`
-	Code         string          `json:"code"`
+	MixedColor      *entity.Color   `json:"mixedColor"`
+	RandomColors    []*entity.Color `json:"randomColors"`
+	Code            string          `json:"code"`
+	RaundStartPoint int             `json:"raundStartPoint"`
+	TotalPoint      int             `json:"totalPoint"`
 }
 
 type GetLevelResponse struct {
 	LevelCount   int `json:"levelCount"`
 	DefaultLevel int `json:"defaultLevel"`
+}
+
+type GetColorHelpResponse struct {
+	SelectedColors []*entity.Color `json:"selectedColors"`
 }
 
 type ValidateColorsResponse struct {

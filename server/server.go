@@ -27,9 +27,23 @@ func NewServer() *gin.Engine {
 	httpClientFactory := httpClientFactory.NewHttpClientFactory()
 
 	server.LoadHTMLGlob("static/html/*.html")
+	server.Static("/css", "static/css")
+	server.Static("/js", "static/js")
+	server.Static("/images", "static/images")
+	//server.Use(static.Serve("/assets", static.LocalFile("/assets", false)))
 
 	server.GET("/google/oauth2", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "googleoauth2.html", nil)
+	})
+
+	server.GET("/play", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "play.html", nil)
+	})
+
+	server.GET("/help", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler.HandleColorHelp(ctx)
 	})
 
 	server.GET("/colors", func(ctx *gin.Context) {
