@@ -25,16 +25,19 @@
 .imgResultHappy{
     width: 40px;
     height: 40px;
+    cursor: pointer;
 }
 
 .imgResultAngry {
     width: 40px;
     height: 40px;
+    cursor: pointer;
 }
 
 .imgResultHelp {
     width: 40px;
     height: 40px;
+    cursor: pointer;
 }
 
 .pnlUser{
@@ -63,7 +66,7 @@
 }
 
 .pnlSettings{
-    width: 400px;
+    width: 500px;
     height: 100px;
     margin: auto;
     padding-bottom: 20px;
@@ -94,12 +97,23 @@
 
 .pnlHelpContainer{
     float:left;
+    margin-right: 10px;
+}
+
+.pnlStepHelpContainer{
+    float:left;
 }
 
 .btnHelp{
     width:40px;
     height:50px;
     cursor:pointer;
+}
+
+.btnStepHelp {
+    width: 40px;
+    height: 50px;
+    cursor: pointer;
 }
 
 .clear{
@@ -114,6 +128,11 @@
     padding-top:50px;
 }
 
+.pnlColorName{
+    clear: both;
+    text-align:center;
+}
+
 .actualColor {
     float: left;
     clear: both;
@@ -122,6 +141,7 @@
     border: 1px double black;
     margin: 0px 10px 0px 0px;
     border-radius: 50%;
+    cursor: pointer;
 }
 
 .mixColor {

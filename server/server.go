@@ -42,25 +42,31 @@ func NewServer() *gin.Engine {
 
 	server.GET("/help", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
-		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		colorHandler.HandleColorHelp(ctx)
+	})
+
+	server.GET("/stephelp", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
+		colorHandler.HandleColorStepHelp(ctx)
 	})
 
 	server.GET("/colors", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
-		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		colorHandler.HandleGetRandomColors(ctx)
 	})
 
 	server.GET("/levels", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
-		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		colorHandler.HandleGetLevels(ctx)
 	})
 
 	server.POST("/validate", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
-		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		colorHandler.HandleValidateColors(ctx)
 	})
 
@@ -71,7 +77,7 @@ func NewServer() *gin.Engine {
 
 	server.GET("/ranking", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
-		colorHandler := handler.NewColorHandler(service.NewColorService(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient()))
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		colorHandler.HandleRankings(ctx)
 	})
 

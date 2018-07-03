@@ -25,6 +25,104 @@ hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
 
 const raundStartPoint int = 20
 
+func (service *ColorService) GetColorName(color *entity.Color) (*contract.GetColorNameResponse, error) {
+	response := &contract.GetColorNameResponse{}
+	var err error
+
+	colorName, err := service.getColorName(color)
+
+	if err != nil {
+		fmt.Println("err -> ", err)
+		return nil, types.NewBusinessException("color name exception", "exp.color.name")
+	}
+
+	if colorName == "" {
+		response, err = service.GetColorNameFromColorApi(color)
+
+		if err != nil {
+			fmt.Println("err -> ", err)
+			return nil, types.NewBusinessException("color name exception", "exp.color.name")
+		}
+
+		if response != nil && response.Name != nil && response.Name.Value != "" {
+			colorName = response.Name.Value
+			_, err = service.setColorName(color, colorName)
+
+			if err != nil {
+				fmt.Println("err -> ", err)
+				return nil, types.NewBusinessException("color name exception", "exp.color.name")
+			}
+		}
+	}
+
+	response.Name = &contract.ColorNameItem{Value: colorName}
+
+	return response, err
+}
+
+func (service *ColorService) GetColorNameFromColorApi(color *entity.Color) (*contract.GetColorNameResponse, error) {
+	response := &contract.GetColorNameResponse{}
+	var err error
+
+	path := fmt.Sprintf("http://www.thecolorapi.com/id?rgb=rgb(%d,%d,%d)", color.R, color.G, color.B)
+
+	err = service.httpClient.Get(path).EndStruct(response)
+
+	if err != nil {
+		fmt.Println("err -> ", err)
+		return nil, types.NewBusinessException("color name exception", "exp.color.name")
+	}
+
+	return response, err
+}
+
+func (service *ColorService) GetColorStepHelp(userId string, key string, selectedColors []*entity.Color) (*contract.GetColorStepHelpResponse, error) {
+	response := &contract.GetColorStepHelpResponse{}
+	var err error
+	var color *entity.Color
+	var actualColors []*entity.Color
+
+	actualColors, err = service.getUserRaundGeneratedSelectedColors(key)
+
+	if err != nil {
+		panic(err)
+	}
+
+	helpedColors, err := service.getUserRaundStepHelp(key)
+
+	if err != nil {
+		panic(err)
+	}
+
+	checkForHelpedColors := helpedColors != nil && len(helpedColors) > 0
+
+	if actualColors != nil && len(actualColors) > 0 {
+		for _, actualColor := range actualColors {
+			if !util.IsColorExist(selectedColors, actualColor) {
+
+				if checkForHelpedColors {
+					if !util.IsColorExist(helpedColors, actualColor) {
+						color = actualColor
+						helpedColors = append(helpedColors, color)
+						service.setUserRaundStepHelp(key, helpedColors)
+						break
+					}
+				} else {
+					color = actualColor
+					helpedColors = append(helpedColors, color)
+					service.setUserRaundStepHelp(key, helpedColors)
+					break
+				}
+
+			}
+		}
+	}
+
+	response.Color = color
+
+	return response, err
+}
+
 func (service *ColorService) GetColorHelp(userId string, key string) (*contract.GetColorHelpResponse, error) {
 	response := &contract.GetColorHelpResponse{}
 	var err error
@@ -35,6 +133,8 @@ func (service *ColorService) GetColorHelp(userId string, key string) (*contract.
 	if err != nil {
 		panic(err)
 	}
+
+	//raund puanı sıfırlanmalı.
 
 	response.SelectedColors = selectedColors
 
@@ -82,6 +182,13 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 
 	finalRandomColors := make([]*entity.Color, 0, len(randomColors))
 	for _, randomColor := range randomColors {
+		getColorNameResponse, err := service.GetColorName(randomColor)
+		if err != nil {
+			fmt.Println("err ->", err)
+		}
+		if getColorNameResponse != nil {
+			randomColor.Name = getColorNameResponse.Name.Value
+		}
 		finalRandomColors = append(finalRandomColors, randomColor)
 	}
 
@@ -98,6 +205,17 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	}
 
 	code := util.GenerateGuid()
+
+	getColorNameResponse, err := service.GetColorName(mixedColor)
+
+	if err != nil {
+		fmt.Println("err ->", err)
+	}
+
+	if getColorNameResponse != nil {
+		mixedColor.Name = getColorNameResponse.Name.Value
+	}
+
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
 	response.Code = code
@@ -166,6 +284,50 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	return response, err
 }
 
+func (service *ColorService) setUserRaundStepHelp(key string, colors []*entity.Color) error {
+
+	data := make(map[string]interface{})
+
+	colorBytes, err := json.Marshal(colors)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	data[key] = string(colorBytes)
+
+	_, err = service.redisClient.HMSet("user-raund-step-help", data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundStepHelp(key string) ([]*entity.Color, error) {
+
+	result, err := service.redisClient.HMGet("user-raund-step-help", key)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	actualColors := []*entity.Color{}
+
+	if result == "" {
+		return actualColors, nil
+	}
+
+	err = json.Unmarshal([]byte(result), &actualColors)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return actualColors, err
+}
+
 func (service *ColorService) setUserRaundKey(userId string, key string) error {
 	data := make(map[string]interface{})
 
@@ -189,6 +351,36 @@ func (service *ColorService) deleteUserRaundKey(userId string) error {
 	}
 
 	return nil
+}
+
+func (service *ColorService) getColorName(color *entity.Color) (string, error) {
+
+	code := fmt.Sprintf("%s-%s-%s", strconv.Itoa(color.R), strconv.Itoa(color.G), strconv.Itoa(color.B))
+
+	response, err := service.redisClient.HMGet("color-name", code)
+
+	if err != nil {
+		return response, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return response, err
+}
+
+func (service *ColorService) setColorName(color *entity.Color, name string) (string, error) {
+
+	data := make(map[string]interface{})
+
+	code := fmt.Sprintf("%s-%s-%s", strconv.Itoa(color.R), strconv.Itoa(color.G), strconv.Itoa(color.B))
+
+	data[code] = name
+
+	response, err := service.redisClient.HMSet("color-name", data)
+
+	if err != nil {
+		return response, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return response, err
 }
 
 func (service *ColorService) getUserRaundKey(userId string) (string, error) {

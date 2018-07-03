@@ -13,6 +13,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func (handler ColorHandler) HandleColorStepHelp(ctx *gin.Context) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			util.HandleErr(ctx, err)
+		}
+	}()
+
+	userData, isExist := ctx.Get("User")
+	var user entity.User
+	if isExist {
+		user = userData.(entity.User)
+	} else {
+		panic(types.NewBusinessException("system exception", "exp.systemexception"))
+	}
+
+	key := ctx.GetHeader("RaundKey")
+
+	if key == "" {
+		panic(types.NewBusinessException("system exception", "exp.systemexception"))
+	}
+
+	colorsJson := ctx.Request.URL.Query().Get("colors")
+	colors := []*entity.Color{}
+	err := json.Unmarshal([]byte(colorsJson), &colors)
+
+	if err != nil {
+		panic(types.NewBusinessException("system exception", "exp.systemexception"))
+	}
+
+	response, err := handler.colorService.GetColorStepHelp(user.Id, key, colors)
+	util.CheckErr(err)
+	ctx.JSON(http.StatusOK, response)
+}
+
 func (handler ColorHandler) HandleColorHelp(ctx *gin.Context) {
 
 	defer func() {

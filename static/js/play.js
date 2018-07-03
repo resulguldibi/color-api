@@ -15,29 +15,7 @@
        prepareUserInfo();
     }    
 
-	function getHelp() {
-
-	    var getHelpResponse;
-
-	    $.ajax({
-	        type: 'GET',
-	        async: false,
-	        url: '../help',
-	        headers: {
-	            'Authorization': window.localStorage.getItem("colorToken"),
-	            'RaundKey': window.localStorage.getItem("raundKey")
-	        },
-	        success: function (result) {
-	            
-	            getHelpResponse = result
-
-
-	        },
-	        processData: false
-	    });
-
-	    return getHelpResponse
-    }
+	
 
     function prepareUserInfo(){
         var userInfo = getUserInfo();
@@ -165,7 +143,55 @@
 	    });
 
 	    return getRankingResponse
-	}
+    }
+    
+    function getHelp() {
+
+	    var getHelpResponse;
+
+	    $.ajax({
+	        type: 'GET',
+	        async: false,
+	        url: '../help',
+	        headers: {
+	            'Authorization': window.localStorage.getItem("colorToken"),
+	            'RaundKey': window.localStorage.getItem("raundKey")
+	        },
+	        success: function (result) {
+	            
+	            getHelpResponse = result
+
+
+	        },
+	        processData: false
+	    });
+
+	    return getHelpResponse
+    }
+
+    function getStepHelp(selectedColors) {
+
+        var getStepHelpResponse;
+
+        $.ajax({
+            type: 'GET',
+            async: false,
+            url: '../stephelp?colors=' + JSON.stringify(selectedColors),
+            headers: {
+                'Authorization': window.localStorage.getItem("colorToken"),
+                'RaundKey': window.localStorage.getItem("raundKey")
+            },
+            success: function (result) {
+
+                getStepHelpResponse = result
+
+
+            },
+            processData: false
+        });
+
+        return getStepHelpResponse
+    }
 
 	//amac bir rengin hangi n rengin kar�s�m�ndan elde edildi�ini bulmak, bunun i�in toplam 5 * n + 1 adet random renk olusturulur.	
 	//bu renkler generate edilirken, ilk olarak n adet random renk elde edilir. sonras�nda bu n rengin kar�s�mlar�ndan bir renk elde edilir.
@@ -202,6 +228,40 @@
           $('#imgResultAngry').css("display", "none");
           $('#imgResultHelp').css("display", "none");
     }
+
+    function stepHelp(){
+        var selectedColors = getSelectedColors();
+        var getStepHelpResponse = getStepHelp(selectedColors);
+
+         var listContainer = $('.level' + n + 'Container');
+
+         if (getStepHelpResponse != null && getStepHelpResponse != undefined && getStepHelpResponse.color != undefined && getStepHelpResponse.color !=null){
+
+             var validate = false
+             for (var i = 0; i < listContainer.length; i++) {
+                 var containerItem = listContainer[i]
+                 var choiseItem = containerItem.childNodes[1];
+
+                 var color = {}
+                 color.r = parseInt(choiseItem.getAttribute("r"))
+                 color.g = parseInt(choiseItem.getAttribute("g"))
+                 color.b = parseInt(choiseItem.getAttribute("b"))
+               
+                 var isselected = isColorEquals(getStepHelpResponse.color, color);
+
+                if (isselected) {
+                    choiseItem.checked = false
+                    onDivContainerClick(containerItem, false);
+                    break;
+                }
+             }
+
+             var colors = getSelectedColors();
+             prepareMixColor(colors);
+             displayHelpResult();
+         }      
+    }
+    
 
 	function help() {
 
@@ -260,7 +320,20 @@
 	    }
 
 	    return isExist
-	}
+    }
+    
+
+    function isColorEquals(color1, color2) {
+
+        var isEquals = false;
+        if (color1 != null && color1 != undefined && color2 != null && color2 != undefined) {
+           if (color1.r === color2.r && color1.g === color2.g && color1.b === color2.b) {
+               isEquals = true;               
+           }
+        }
+
+        return isEquals
+    }
 
 
 	function onLevelChange(item) {
@@ -481,9 +554,11 @@
 
 	    $(divMainColor).attr("r", mixColor.r);
 	    $(divMainColor).attr("g", mixColor.g);
-	    $(divMainColor).attr("b", mixColor.b);
+        $(divMainColor).attr("b", mixColor.b);
+        $(divMainColor).attr("title", mixColor.name);
 
-	    $('#mainColor').append(divMainColor)
+        $('#mainColor').append(divMainColor)
+        //$('#mainColor').append($('<div>').attr("class", "pnlColorName").html(mixColor.name))
 
 	    for (var i = 0; i < finalColors.length; i++) {
 	        var div = $('<div>');
@@ -492,9 +567,11 @@
 	        $(divContainer).attr("onclick", "onDivContainerClick(this,true)");
 	        $(divContainer).attr("class", "level" + n + "Container");
 
-	        $(div).attr("class", "level" + n + "RandomColor");
+            $(div).attr("class", "level" + n + "RandomColor");
+            $(div).attr("title", finalColors[i].name);
 	        $(div).css("background", getColorHexCode(finalColors[i]))
-	        $(divContainer).append(div)
+            $(divContainer).append(div)
+            //$(divContainer).append($('<div>').attr("class", "pnlColorName").html(finalColors[i].name))
 
 	        var choise = $("<input>");
 

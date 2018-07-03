@@ -9,6 +9,7 @@ import (
 type ColorService struct {
 	colorRepository repository.ColorRepository
 	redisClient     redisClient.IRedisClient
+	httpClient      httpClient.IHttpClient
 }
 
 type UserService struct {
@@ -18,6 +19,10 @@ type UserService struct {
 
 func NewColorService(colorRepository repository.ColorRepository, redisClient redisClient.IRedisClient) ColorService {
 	return ColorService{colorRepository: colorRepository, redisClient: redisClient}
+}
+
+func NewColorServiceHttpClient(colorRepository repository.ColorRepository, redisClient redisClient.IRedisClient, httpClient httpClient.IHttpClient) ColorService {
+	return ColorService{colorRepository: colorRepository, redisClient: redisClient, httpClient: httpClient}
 }
 
 func NewUserService(redisClient redisClient.IRedisClient) UserService {

@@ -21,6 +21,19 @@ type GetColorHelpResponse struct {
 	SelectedColors []*entity.Color `json:"selectedColors"`
 }
 
+type GetColorStepHelpResponse struct {
+	Color *entity.Color `json:"color"`
+}
+
+type GetColorNameResponse struct {
+	Name *ColorNameItem `json:"name"`
+}
+
+type ColorNameItem struct {
+	Value           string `json:"value"`
+	ClosestNamedHex string `json:"closest_named_hex"`
+}
+
 type ValidateColorsResponse struct {
 	IsValid    bool `json:"isValid"`
 	RaundPoint int  `json:"raundPoint"`

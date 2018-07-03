@@ -10,10 +10,11 @@ type ResponseStatus struct {
 }
 
 type Color struct {
-	R          int  `json:"r"`
-	G          int  `json:"g"`
-	B          int  `json:"b"`
-	IsSelected bool `json:"-"`
+	R          int    `json:"r"`
+	G          int    `json:"g"`
+	B          int    `json:"b"`
+	Name       string `json:"name"`
+	IsSelected bool   `json:"-"`
 }
 
 type User struct {
