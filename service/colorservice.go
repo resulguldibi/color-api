@@ -260,6 +260,7 @@ func (service *ColorService) GetColorStepHelp(userId string, key string, selecte
 	var actualColors []*entity.Color
 	var userRaundPoint int
 	var isRaundAlreadyValidated = false
+	var level int
 
 	isRaundAlreadyValidated, err = service.getUserRaundValidation(key)
 
@@ -275,6 +276,14 @@ func (service *ColorService) GetColorStepHelp(userId string, key string, selecte
 
 	if err != nil {
 		panic(err)
+	}
+
+	//check user level for max helped colors
+
+	level, err = service.getUserRaundLevel(userId)
+
+	if helpedColors != nil && len(helpedColors) > 0 && level == len(helpedColors) {
+		return nil, types.NewBusinessException("cannot get help anymore", "exp.cannot.stephelp.anymore")
 	}
 
 	//check user raund point to hep for new color
