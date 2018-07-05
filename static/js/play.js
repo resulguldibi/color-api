@@ -2,7 +2,9 @@
 	googleLoginRequest = {};
 	googleLoginRequest.token = googkeToken
 
-    validateColorRequest = {}
+	validateColorRequest = {}
+	
+	var helpedColors = [];
 
     initUser();
     
@@ -98,7 +100,8 @@
 	            getColorsResponse = result
                 window.localStorage.setItem("raundKey", result.code)
                 setRaundStartPoint(result.raundStartPoint)
-                setTotalPoint(result.totalPoint)
+				setTotalPoint(result.totalPoint)
+				helpedColors = []
 
 	        },
 	        processData: false
@@ -250,6 +253,9 @@
 	 	$('#pnlTotalPoint').html(point)
 	 }
 
+
+	 
+
     function stepHelp(){
         var selectedColors = getSelectedColors();
         var getStepHelpResponse = getStepHelp(selectedColors);
@@ -270,12 +276,20 @@
 				 var istried = choiseItem.getAttribute("istried");
                  var isselected = isColorEquals(getStepHelpResponse.color, color);
 
-                 if (isselected) {
-                 	choiseItem.checked = false
+                 if (isselected || istried === 'true') {
+					 
+					if (isselected){
+						if (!isColorExist(helpedColors, color)){
+							helpedColors.push(color)							
+						}	
+						choiseItem.checked = false
+					 }
+					 if (istried === 'true' && isColorExist(helpedColors, color)) {
+						choiseItem.checked = false
+					 }
+				                	
                  	onDivContainerClick(containerItem, false);
-                 } else if (istried === 'true') {
-                 	onDivContainerClick(containerItem, false);
-                 }
+                 } 
              }
 
              var colors = getSelectedColors();
@@ -672,7 +686,7 @@
 	}
 
 	function getColor(code) {
-	    if (code < 10)
+	    if (code < 16)
 	        return code.toString(16) + code.toString(16)
 	    else
 	        return code.toString(16)

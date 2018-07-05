@@ -120,7 +120,7 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 	} else {
 
 		// calculate point with generated point algorithm.
-		raundPoint, err := service.calculateUserRaundPoint(userId, key)
+		raundPoint, err := service.getUserRaundPoint(userId, key)
 		if err != nil {
 			return nil, err
 		}
@@ -1064,27 +1064,6 @@ func (service *ColorService) updateUserTotalPoint(userId string, pointToAdd int)
 	}
 
 	return nil
-}
-
-func (service *ColorService) calculateUserRaundPoint(userId string, key string) (int, error) {
-
-	//hmset user-raund-point "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "100"
-	step, err := service.getUserRaundStepNumber(userId, key)
-
-	//raund full point is level * 20
-
-	var level int
-	level, err = service.getUserRaundLevel(userId)
-
-	if err != nil {
-		return 0, types.NewBusinessException("system exception", "exp.systemexception")
-	}
-
-	raundPoint := level * raundStartPoint
-
-	raundPoint = raundPoint - step
-
-	return raundPoint, nil
 }
 
 func (service *ColorService) setUserRaundLevel(userId string, level int64) error {
