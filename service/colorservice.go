@@ -25,6 +25,183 @@ hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
 
 const raundStartPoint int = 20
 
+func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color) (*contract.ValidateColorsResponse, error) {
+	response := &contract.ValidateColorsResponse{}
+	var err error
+	var key string
+
+	var isColorsValid bool = false
+
+	// get code from client (code was sended to client in /colors response) in /validate request to calculate user point (client should send this guid in /validate request)
+	// validate raund key
+
+	key, err = service.getUserRaundKey(userId)
+
+	if err != nil {
+		return nil, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	if key != sendedKey {
+		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
+	}
+
+	var mixedColor *entity.Color
+	mixedColor, err = service.getUserRaundGeneratedMixedColor(key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// validate sended color
+	allColors := append(colors, mixedColor)
+
+	isColorsValid, err = service.validateSendedColors(userId, key, allColors)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !isColorsValid {
+		return nil, types.NewBusinessException("invalid colors", "exp.invalidcolors")
+	}
+
+	// if step number is reached to max retry number, then game is over.
+
+	err = service.checkUserRaundStepNumber(userId, key)
+	if err != nil {
+		return nil, err
+	}
+	// increment user step number in every /validate request (store this data in redis        -> hmset user-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
+
+	err = service.updateUserRaundStepNumber(userId, key)
+	if err != nil {
+		return nil, err
+	}
+
+	isMatched := util.IsMatchedColors(colors, mixedColor)
+
+	if !isMatched {
+		// if step number is reached to max retry number, then game is over.
+
+		err = service.checkUserRaundStepNumber(userId, key)
+		if err != nil {
+
+			switch err.(type) {
+			case *types.GameOverException:
+				innerErr := service.setUserRaundPoint(userId, key, 0)
+				if innerErr != nil {
+					return nil, innerErr
+				}
+
+				innerErr = service.setUserTotalPoint(userId, 0)
+				if innerErr != nil {
+					return nil, innerErr
+				}
+			}
+
+			return nil, err
+		}
+
+		raundPoint, err := service.getUserRaundPoint(userId, key)
+		if err != nil {
+			return nil, types.NewBusinessException("system exception", "exp.systemexception")
+		}
+
+		raundPoint = raundPoint - 1
+
+		err = service.setUserRaundPoint(userId, key, raundPoint)
+
+		if err != nil {
+			return nil, types.NewBusinessException("system exception", "exp.systemexception")
+		}
+
+		response.RaundPoint = raundPoint
+
+	} else {
+
+		// calculate point with generated point algorithm.
+		raundPoint, err := service.calculateUserRaundPoint(userId, key)
+		if err != nil {
+			return nil, err
+		}
+		// update user point
+		raundPoint = raundPoint + 1
+		err = service.setUserRaundPoint(userId, key, raundPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.updateUserTotalPoint(userId, raundPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		response.RaundPoint = raundPoint
+	}
+
+	response.IsValid = isMatched
+	totalPoint, err := service.getUserTotalPoint(userId)
+	if err == nil {
+		response.TotalPoint = totalPoint
+	}
+
+	if isMatched {
+		err = service.deleteUserRaundKey(userId)
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.deleteExistingKeyRelatedData(key)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.setUserRaundValidation(key, true)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return response, err
+}
+
+func (service *ColorService) GetRankings(userId string, sendedKey string) (*contract.GetRankingResponse, error) {
+	response := &contract.GetRankingResponse{}
+	var err error
+	var key string
+	var raundPoint int
+	var totalPoint int
+
+	key, err = service.getUserRaundKey(userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if key != sendedKey {
+		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
+	}
+
+	raundPoint, err = service.getUserRaundPoint(userId, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	totalPoint, err = service.getUserTotalPoint(userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response.RaundPoint = raundPoint
+	response.TotalPoint = totalPoint
+
+	return response, err
+}
+
 func (service *ColorService) GetColorName(color *entity.Color) (*contract.GetColorNameResponse, error) {
 	response := &contract.GetColorNameResponse{}
 	var err error
@@ -81,14 +258,38 @@ func (service *ColorService) GetColorStepHelp(userId string, key string, selecte
 	var err error
 	var color *entity.Color
 	var actualColors []*entity.Color
+	var userRaundPoint int
+	var isRaundAlreadyValidated = false
 
-	actualColors, err = service.getUserRaundGeneratedSelectedColors(key)
+	isRaundAlreadyValidated, err = service.getUserRaundValidation(key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if isRaundAlreadyValidated {
+		return nil, types.NewBusinessException("raund is already validated", "exp.raund.already.validated")
+	}
+
+	helpedColors, err := service.getUserRaundStepHelp(key)
 
 	if err != nil {
 		panic(err)
 	}
 
-	helpedColors, err := service.getUserRaundStepHelp(key)
+	//check user raund point to hep for new color
+
+	userRaundPoint, err = service.getUserRaundPoint(userId, key)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if userRaundPoint < raundStartPoint {
+		return nil, types.NewBusinessException("not enough point", "exp.not.enough.point")
+	}
+
+	actualColors, err = service.getUserRaundGeneratedSelectedColors(key)
 
 	if err != nil {
 		panic(err)
@@ -118,7 +319,16 @@ func (service *ColorService) GetColorStepHelp(userId string, key string, selecte
 		}
 	}
 
-	response.Color = color
+	if color != nil {
+		response.Color = color
+		newPoint := userRaundPoint - raundStartPoint
+		err = service.setUserRaundPoint(userId, key, newPoint)
+		if err != nil {
+			panic(err)
+		}
+
+		response.Point = newPoint
+	}
 
 	return response, err
 }
@@ -134,9 +344,15 @@ func (service *ColorService) GetColorHelp(userId string, key string) (*contract.
 		panic(err)
 	}
 
-	//raund puanı sıfırlanmalı.
+	//reset raund point
+
+	err = service.setUserRaundPoint(userId, key, 0)
+	if err != nil {
+		panic(err)
+	}
 
 	response.SelectedColors = selectedColors
+	response.Point = 0
 
 	return response, err
 }
@@ -328,6 +544,13 @@ func (service *ColorService) getUserRaundStepHelp(key string) ([]*entity.Color, 
 	return actualColors, err
 }
 
+func (service *ColorService) deleteUserRaundStepHelp(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-step-help", key)
+
+	return err
+}
+
 func (service *ColorService) setUserRaundKey(userId string, key string) error {
 	data := make(map[string]interface{})
 
@@ -345,6 +568,17 @@ func (service *ColorService) setUserRaundKey(userId string, key string) error {
 func (service *ColorService) deleteUserRaundKey(userId string) error {
 
 	_, err := service.redisClient.HDel("user-raund-key", userId)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) deleteUserRaundValidation(key string) error {
+
+	_, err := service.redisClient.HDel("user-raund-validation", key)
 
 	if err != nil {
 		return types.NewBusinessException("system exception", "exp.systemexception")
@@ -392,6 +626,39 @@ func (service *ColorService) getUserRaundKey(userId string) (string, error) {
 	}
 
 	return response, err
+}
+
+func (service *ColorService) setUserRaundValidation(key string, isValidated bool) error {
+
+	data := make(map[string]interface{})
+
+	data[key] = isValidated
+	_, err := service.redisClient.HMSet("user-raund-validation", data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) getUserRaundValidation(key string) (bool, error) {
+	var isValidated bool = false
+	result, err := service.redisClient.HMGet("user-raund-validation", key)
+
+	if err != nil {
+		return false, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	if result != "" {
+		isValidated, err = strconv.ParseBool(result)
+
+		if err != nil {
+			return false, types.NewBusinessException("system exception", "exp.systemexception")
+		}
+	}
+
+	return isValidated, nil
 }
 
 func (service *ColorService) setUserRaundGeneratedSelectedColors(key string, colors []*entity.Color) error {
@@ -503,6 +770,10 @@ func (service *ColorService) deleteExistingKeyRelatedData(key string) error {
 	err = service.deleteUserExistingRaundPoint(key)
 
 	err = service.deleteUserExistingRaundGeneratedSelectedColors(key)
+
+	err = service.deleteUserRaundValidation(key)
+
+	err = service.deleteUserRaundStepHelp(key)
 
 	return err
 
@@ -694,12 +965,6 @@ func (service *ColorService) checkUserRaundStepNumber(userId string, key string)
 		return types.NewGameOverException("max retry count reached", "exp.maxretrycountreached")
 	}
 
-	err = service.setUserRaundPoint(userId, key, maxStep-step)
-
-	if err != nil {
-		return types.NewBusinessException("system exception", "exp.systemexception")
-	}
-
 	return nil
 }
 
@@ -856,162 +1121,4 @@ func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
 	}
 
 	return level, nil
-}
-
-func (service *ColorService) ValidateColors(userId string, sendedKey string, colors []*entity.Color) (*contract.ValidateColorsResponse, error) {
-	response := &contract.ValidateColorsResponse{}
-	var err error
-	var key string
-
-	var isColorsValid bool = false
-
-	// get code from client (code was sended to client in /colors response) in /validate request to calculate user point (client should send this guid in /validate request)
-	// validate raund key
-
-	key, err = service.getUserRaundKey(userId)
-
-	if err != nil {
-		return nil, types.NewBusinessException("system exception", "exp.systemexception")
-	}
-
-	if key != sendedKey {
-		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
-	}
-
-	var mixedColor *entity.Color
-	mixedColor, err = service.getUserRaundGeneratedMixedColor(key)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// validate sended color
-	allColors := append(colors, mixedColor)
-
-	isColorsValid, err = service.validateSendedColors(userId, key, allColors)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !isColorsValid {
-		return nil, types.NewBusinessException("invalid colors", "exp.invalidcolors")
-	}
-
-	// if step number is reached to max retry number, then game is over.
-
-	err = service.checkUserRaundStepNumber(userId, key)
-	if err != nil {
-		return nil, err
-	}
-	// increment user step number in every /validate request (store this data in redis        -> hmset user-step-number "1234" "12s12-12sas-3asw12-12sa1" "12s12-12sas-3asw12-12sa1" "10")
-
-	err = service.updateUserRaundStepNumber(userId, key)
-	if err != nil {
-		return nil, err
-	}
-
-	isMatched := util.IsMatchedColors(colors, mixedColor)
-
-	if !isMatched {
-		// if step number is reached to max retry number, then game is over.
-
-		err = service.checkUserRaundStepNumber(userId, key)
-		if err != nil {
-
-			switch err.(type) {
-			case *types.GameOverException:
-				innerErr := service.setUserRaundPoint(userId, key, 0)
-				if innerErr != nil {
-					return nil, innerErr
-				}
-
-				innerErr = service.setUserTotalPoint(userId, 0)
-				if innerErr != nil {
-					return nil, innerErr
-				}
-			}
-
-			return nil, err
-		}
-	} else {
-
-		// calculate point with generated point algorithm.
-		raundPoint, err := service.calculateUserRaundPoint(userId, key)
-		if err != nil {
-			return nil, err
-		}
-		// update user point
-		raundPoint = raundPoint + 1
-		err = service.setUserRaundPoint(userId, key, raundPoint)
-		if err != nil {
-			return nil, err
-		}
-
-		err = service.updateUserTotalPoint(userId, raundPoint)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	response.IsValid = isMatched
-	totalPoint, err := service.getUserTotalPoint(userId)
-	if err == nil {
-		response.TotalPoint = totalPoint
-	}
-
-	raundPoint, err := service.getUserRaundPoint(userId, key)
-	if err == nil {
-		response.RaundPoint = raundPoint
-	}
-
-	if isMatched {
-		err = service.deleteUserRaundKey(userId)
-		if err != nil {
-			return nil, err
-		}
-
-		err = service.deleteExistingKeyRelatedData(key)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return response, err
-}
-
-func (service *ColorService) GetRankings(userId string, sendedKey string) (*contract.GetRankingResponse, error) {
-	response := &contract.GetRankingResponse{}
-	var err error
-	var key string
-	var raundPoint int
-	var totalPoint int
-
-	key, err = service.getUserRaundKey(userId)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if key != sendedKey {
-		return nil, types.NewBusinessException("invalid key", "exp.invalidkey")
-	}
-
-	raundPoint, err = service.getUserRaundPoint(userId, key)
-
-	if err != nil {
-		return nil, err
-	}
-
-	totalPoint, err = service.getUserTotalPoint(userId)
-
-	if err != nil {
-		return nil, err
-	}
-
-	response.RaundPoint = raundPoint
-	response.TotalPoint = totalPoint
-
-	return response, err
 }

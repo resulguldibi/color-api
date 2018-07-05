@@ -19,10 +19,12 @@ type GetLevelResponse struct {
 
 type GetColorHelpResponse struct {
 	SelectedColors []*entity.Color `json:"selectedColors"`
+	Point          int             `json:"point"`
 }
 
 type GetColorStepHelpResponse struct {
 	Color *entity.Color `json:"color"`
+	Point int           `json:"point"`
 }
 
 type GetColorNameResponse struct {

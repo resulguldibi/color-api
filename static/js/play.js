@@ -182,10 +182,12 @@
                 'RaundKey': window.localStorage.getItem("raundKey")
             },
             success: function (result) {
-
                 getStepHelpResponse = result
-
-
+                setRaundStartPoint(result.point)
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                
+               getStepHelpResponse = JSON.parse(jqXHR.responseText)
             },
             processData: false
         });
@@ -224,10 +226,29 @@
     }
 
     function clearResult(){
-          $('#imgResultHappy').css("display", "none");
-          $('#imgResultAngry').css("display", "none");
-          $('#imgResultHelp').css("display", "none");
-    }
+        $('#imgResultHappy').css("display", "none");
+        $('#imgResultAngry').css("display", "none");
+        $('#imgResultHelp').css("display", "none");
+        $('#pnlTextResult').css("display", "none");
+        $('#pnlTextResult').html('')
+	}
+	
+	function displayHelpResult() {
+		$('#imgResultHelp').css("display", "block");
+	}
+
+	function displayMessageResult(messsage) {
+		$('#pnlTextResult').css("display", "block");
+		$('#pnlTextResult').html(messsage)
+	}
+
+	 function setRaundStartPoint(point) {
+	 	$('#pnlRaundStartPoint').html(point);
+	 }
+
+	 function setTotalPoint(point) {
+	 	$('#pnlTotalPoint').html(point)
+	 }
 
     function stepHelp(){
         var selectedColors = getSelectedColors();
@@ -237,7 +258,6 @@
 
          if (getStepHelpResponse != null && getStepHelpResponse != undefined && getStepHelpResponse.color != undefined && getStepHelpResponse.color !=null){
 
-             var validate = false
              for (var i = 0; i < listContainer.length; i++) {
                  var containerItem = listContainer[i]
                  var choiseItem = containerItem.childNodes[1];
@@ -246,22 +266,29 @@
                  color.r = parseInt(choiseItem.getAttribute("r"))
                  color.g = parseInt(choiseItem.getAttribute("g"))
                  color.b = parseInt(choiseItem.getAttribute("b"))
-               
+			   
+				 var istried = choiseItem.getAttribute("istried");
                  var isselected = isColorEquals(getStepHelpResponse.color, color);
 
-                if (isselected) {
-                    choiseItem.checked = false
-                    onDivContainerClick(containerItem, false);
-                    break;
-                }
+                 if (isselected) {
+                 	choiseItem.checked = false
+                 	onDivContainerClick(containerItem, false);
+                 } else if (istried === 'true') {
+                 	onDivContainerClick(containerItem, false);
+                 }
              }
 
              var colors = getSelectedColors();
-             prepareMixColor(colors);
+			 prepareMixColor(colors);
+			 clearResult();
              displayHelpResult();
+         } else if (!getStepHelpResponse.issuccess){
+			  clearResult();
+			  	displayHelpResult();
+                displayMessageResult(getStepHelpResponse.message)
          }      
     }
-    
+	
 
 	function help() {
 
@@ -270,8 +297,7 @@
 	    var getHelpResponse = getHelp();
 
 	    if (getHelpResponse != null && getHelpResponse != undefined && getHelpResponse.selectedColors != null && getHelpResponse.selectedColors != undefined && getHelpResponse.selectedColors.length > 0) {
-
-	        var validate = false
+	       
 	        for (var i = 0; i < listContainer.length; i++) {
 	            var containerItem = listContainer[i]
 	            var choiseItem = containerItem.childNodes[1];
@@ -294,13 +320,12 @@
             
             var colors = getSelectedColors()
             prepareMixColor(colors)
-            displayHelpResult();
+			displayHelpResult();
+			setRaundStartPoint(getHelpResponse.point)
 	    }
     }
     
-    function displayHelpResult(){
-        $('#imgResultHelp').css("display", "block");
-    }
+    
 
 	function isColorExist(colors, color) {
 
@@ -353,13 +378,7 @@
 	    refreshItems();
     }
     
-    function setRaundStartPoint(point){
-        $('#pnlRaundStartPoint').html(point);
-    }
-
-    function setTotalPoint(point) {
-        $('#pnlTotalPoint').html(point)
-    }
+   
 
     function getSelectedColors(){
         var list = $('.choise'); //document.getElementsByClassName('choise');
@@ -429,9 +448,7 @@
 	        var validateColorsResponse = validateColors(validateColorRequest)
 	        
 	        if (validateColorsResponse != null && validateColorsResponse != undefined) {
-                 $('#imgResultHappy').css("display", "none");
-                 $('#imgResultAngry').css("display", "none");
-                 $('#imgResultHelp').css("display", "none");
+                 clearResult()
 
 	            if (validateColorsResponse.isValid) {
                    	$('#imgResultHappy').css("display", "block");

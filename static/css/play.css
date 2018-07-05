@@ -34,6 +34,14 @@
     cursor: pointer;
 }
 
+.pnlTextResult{
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+    color: #adadad;
+    margin-top: 5px;
+}
+
 .imgResultHelp {
     width: 40px;
     height: 40px;
