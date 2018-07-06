@@ -58,6 +58,12 @@ func NewServer() *gin.Engine {
 		colorHandler.HandleGetRandomColors(ctx)
 	})
 
+	server.GET("/history/raund", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
+		colorHandler.HandleRaundHistory(ctx)
+	})
+
 	server.GET("/levels", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
 		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))

@@ -66,7 +66,10 @@
                 validateColorResponse = result
                 setRaundStartPoint(result.raundPoint)
                 setTotalPoint(result.totalPoint)
-	        },
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				validateColorResponse = JSON.parse(jqXHR.responseText)
+			},
 	        processData: false,
 	        data: JSON.stringify(validateColorRequest)
 	    });
@@ -196,7 +199,35 @@
         });
 
         return getStepHelpResponse
-    }
+	}
+
+	 function getRaundHistory() {
+
+	 	var getRaundHistoryResponse;
+
+	 	$.ajax({
+	 		type: 'GET',
+	 		async: false,
+	 		url: '../history/raund',
+	 		headers: {
+	 			'Authorization': window.localStorage.getItem("colorToken"),
+	 			'RaundKey': window.localStorage.getItem("raundKey")
+	 		},
+	 		success: function (result) {
+	 			getRaundHistoryResponse = result
+	 			debugger;
+	 		},
+	 		error: function (jqXHR, textStatus, errorThrown) {
+
+	 			getRaundHistoryResponse = JSON.parse(jqXHR.responseText)
+	 		},
+	 		processData: false
+	 	});
+
+	 	return getRaundHistoryResponse
+	 }
+	
+
 
 	//amac bir rengin hangi n rengin kar�s�m�ndan elde edildi�ini bulmak, bunun i�in toplam 5 * n + 1 adet random renk olusturulur.	
 	//bu renkler generate edilirken, ilk olarak n adet random renk elde edilir. sonras�nda bu n rengin kar�s�mlar�ndan bir renk elde edilir.
@@ -462,13 +493,13 @@
 	        var validateColorsResponse = validateColors(validateColorRequest)
 	        
 	        if (validateColorsResponse != null && validateColorsResponse != undefined) {
-                 clearResult()
-
-	            if (validateColorsResponse.isValid) {
-                   	$('#imgResultHappy').css("display", "block");
-	            } else {
-	                $('#imgResultAngry').css("display", "block");
-	            }
+                 clearResult()	            
+				if (validateColorsResponse.isValid) {
+					$('#imgResultHappy').css("display", "block");
+				} else if (!validateColorsResponse.issuccess) {							
+					$('#imgResultAngry').css("display", "block");
+					displayMessageResult(validateColorsResponse.message)
+				}
 	        }
 	    }
 	}

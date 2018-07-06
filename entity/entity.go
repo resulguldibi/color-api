@@ -1,6 +1,8 @@
 package entity
 
-import jwt "github.com/dgrijalva/jwt-go"
+import (
+	jwt "github.com/dgrijalva/jwt-go"
+)
 
 type ResponseStatus struct {
 	IsSucccess bool   `json:"issuccess"`
@@ -70,6 +72,11 @@ type GoogleOpenIDOAuthCertKey struct {
 
 type UserRaundStepNumber struct {
 	Step int `json:"step"`
+}
+
+type UserRaundColorValidationAttempt struct {
+	SendedColors []*Color `json:"sendedColors"`
+	MixedColor   *Color   `json:"mixedColor"`
 }
 
 type Token struct {

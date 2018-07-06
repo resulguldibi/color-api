@@ -110,6 +110,10 @@
 
 .pnlStepHelpContainer{
     float:left;
+        margin-right: 10px;
+}
+.pnlRaundHistoryContainer{
+     float:left;
 }
 
 .btnHelp{
@@ -122,6 +126,19 @@
     width: 40px;
     height: 50px;
     cursor: pointer;
+}
+
+.btnRaundHistory {
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    /* background-size: 40px 40px; */
+    /* background-color: black; */
+    background: url(../images/history.png) transparent;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    /* color: antiquewhite; */
 }
 
 .clear{

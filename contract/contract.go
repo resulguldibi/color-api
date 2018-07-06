@@ -63,5 +63,9 @@ type GetRankingResponse struct {
 	TotalPoint int `json:"totalPoint"`
 }
 
+type GetUserRaundHistoryResponse struct {
+	Attempts []*entity.UserRaundColorValidationAttempt `json:"attempts"`
+}
+
 type GetRankingRequest struct {
 }
