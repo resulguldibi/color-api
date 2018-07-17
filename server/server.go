@@ -40,6 +40,10 @@ func NewServer() *gin.Engine {
 		ctx.HTML(http.StatusOK, "play.html", nil)
 	})
 
+	server.GET("/stage", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "stage.html", nil)
+	})
+
 	server.GET("/help", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
 		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))

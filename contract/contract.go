@@ -10,6 +10,7 @@ type GetColorResponse struct {
 	Code            string          `json:"code"`
 	RaundStartPoint int             `json:"raundStartPoint"`
 	TotalPoint      int             `json:"totalPoint"`
+	RaundNumber     int64           `json:"raundNumber"`
 }
 
 type GetLevelResponse struct {

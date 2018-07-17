@@ -454,13 +454,21 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	getColorNameResponse, err := service.GetColorName(mixedColor)
 
 	if err != nil {
-		fmt.Println("err ->", err)
+		panic(err)
 	}
 
 	if getColorNameResponse != nil {
 		mixedColor.Name = getColorNameResponse.Name.Value
 	}
 
+	var raundNumber int64 = 0
+	raundNumber, err = service.getUserRaundNumberByLevel(userId, level)
+
+	if err != nil {
+		panic(err)
+	}
+
+	response.RaundNumber = raundNumber
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
 	response.Code = code
@@ -527,6 +535,19 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	}
 
 	return response, err
+}
+
+func (service *ColorService) getUserRaundNumberByLevel(userId string, level int64) (int64, error) {
+
+	userRaundKeyByLevel := fmt.Sprintf("%s-%d", userId, level)
+
+	updatedRaundNumber, err := service.redisClient.HIncrBy("user-raund-number-by-level", userRaundKeyByLevel, 1)
+
+	if err != nil {
+		return updatedRaundNumber, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return updatedRaundNumber, nil
 }
 
 func (service *ColorService) addUserRaundColorValidationAttempts(key string, attempt *entity.UserRaundColorValidationAttempt) error {
