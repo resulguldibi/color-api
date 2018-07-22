@@ -204,6 +204,20 @@ func (service *ColorService) ValidateColors(userId string, sendedKey string, col
 		if err != nil {
 			return nil, err
 		}
+
+		var level int
+		level, err = service.getUserRaundLevel(userId)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = service.incrementUserStageInfo(userId, level, 1)
+
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return response, err
@@ -1247,7 +1261,7 @@ func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
 func (service *ColorService) getUserStageInfo(userId string, stage int) (int, error) {
 	var result string
 	var err error
-	result, err = service.redisClient.HMGet(fmt.Sprintf("user-stage-info-%s", userId), strconv.Itoa(stage))
+	result, err = service.redisClient.HGet(fmt.Sprintf("user-stage-info-%s", userId), strconv.Itoa(stage))
 
 	if err != nil {
 		return 0, types.NewBusinessException("system exception", "exp.systemexception")
@@ -1267,11 +1281,19 @@ func (service *ColorService) getUserStageInfo(userId string, stage int) (int, er
 }
 
 func (service *ColorService) setUserStageInfo(userId string, stage int, count int) error {
-	data := make(map[string]interface{})
 
-	data[strconv.Itoa(stage)] = count
+	_, err := service.redisClient.HSet(fmt.Sprintf("user-stage-info-%s", userId), strconv.Itoa(stage), count)
 
-	_, err := service.redisClient.HMSet(fmt.Sprintf("user-stage-info-%s", userId), data)
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) incrementUserStageInfo(userId string, stage int, count int) error {
+
+	_, err := service.redisClient.HIncrBy(fmt.Sprintf("user-stage-info-%s", userId), strconv.Itoa(stage), int64(count))
 
 	if err != nil {
 		return types.NewBusinessException("system exception", "exp.systemexception")
