@@ -326,11 +326,11 @@
              var colors = getSelectedColors();
 			 prepareMixColor(colors);
 			 clearResult();
-             displayHelpResult();
+			 displayHelpResult();			 
          } else if (!getStepHelpResponse.issuccess){
 			  clearResult();
-			  	displayHelpResult();
-                displayMessageResult(getStepHelpResponse.message)
+			  displayHelpResult();
+              displayMessageResult(getStepHelpResponse.message);
          }      
     }
 	
@@ -367,6 +367,7 @@
             prepareMixColor(colors)
 			displayHelpResult();
 			setRaundStartPoint(getHelpResponse.point)
+			window.clearInterval(window.intervalId);
 	    }
     }
     
@@ -496,7 +497,7 @@
                  clearResult()	            
 				if (validateColorsResponse.isValid) {
 					$('#imgResultHappy').css("display", "block");
-					window.clearInterval(window.intervalId)
+					window.clearInterval(window.intervalId);
 				} else if (!validateColorsResponse.issuccess) {							
 					$('#imgResultAngry').css("display", "block");
 					displayMessageResult(validateColorsResponse.message)
