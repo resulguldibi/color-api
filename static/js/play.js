@@ -247,13 +247,13 @@
 	$('#randomColors').attr("class", "level" + n + "RandomContainer");
 
 	var totalColorCount = 5 * n + 1
-
+	var countDownStartSeconds = 60;
 	clearSettings();
 	window.stepNumber = 0;
 	initColors();
 	initLevels();
 
-
+	countDown(countDownStartSeconds)
     function clearSettings(){
         clearResult();
         $('#pnlRaundStartPoint').html('');
@@ -496,6 +496,7 @@
                  clearResult()	            
 				if (validateColorsResponse.isValid) {
 					$('#imgResultHappy').css("display", "block");
+					window.clearInterval(window.intervalId)
 				} else if (!validateColorsResponse.issuccess) {							
 					$('#imgResultAngry').css("display", "block");
 					displayMessageResult(validateColorsResponse.message)
@@ -664,16 +665,20 @@
 	}
 
 	function refreshItems() {
+		prepareItems();
+		countDown(countDownStartSeconds);
+	}
 
-	    window.stepNumber = 0
-	    clearChilds("mainColor")
-	    clearChilds("randomColors")
+	function prepareItems(){
+		window.stepNumber = 0
+		clearChilds("mainColor")
+		clearChilds("randomColors")
 
-	    var mainColor = $('#mainColor');
-	    $(mainColor).css("width", "112px");
+		var mainColor = $('#mainColor');
+		$(mainColor).css("width", "112px");
 
 
-	    initColors()
+		initColors()
 	}
 
 	function clearChilds(element) {
@@ -732,5 +737,20 @@
         var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         return JSON.parse(window.atob(base64));
     }
+    var intervalId;
+    function countDown(startSecond){
+		$('#pnlTimer').html(startSecond)
+		window.startSecond = parseInt(startSecond);
+		window.clearInterval(intervalId);
+		intervalId = window.setInterval(function () {
+			
+			if (window.startSecond > 0) {
+				 window.startSecond = window.startSecond -1;
+				 $('#pnlTimer').html(window.startSecond)
+			} else if (window.startSecond == 0) {
+				prepareItems();
+				countDown(countDownStartSeconds);
+			}		
 
-    
+		},1000);
+	}

@@ -73,6 +73,13 @@
     color: #adadad;
 }
 
+.pnlTimer {
+ margin: auto;
+ font-weight: bold;
+ font-size:40px;
+ color: #adadad;
+}
+
 .pnlSettings{
     width: 500px;
     height: 100px;

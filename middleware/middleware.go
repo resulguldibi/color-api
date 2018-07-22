@@ -49,7 +49,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 }
 
 func isAuthorizationRequired(path string) bool {
-	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token", "/google/oauth2", "/favicon.ico", "/", "/play", "/stage", "/css/", "/css/play.css", "/js", "/js/play.js", "/images", "/images/happy.png", "/images/angry.png", "/images/angry2.png", "/images/history.png", "/images/star.png"}
+	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token", "/google/oauth2", "/favicon.ico", "/", "/play", "/stage", "/css/", "/css/play.css", "/js", "/js/play.js", "/images", "/images/happy.png", "/images/angry.png", "/images/angry2.png", "/images/history.png", "/images/star.png", "/images/timer.png", "/images/mark.png"}
 	var isAuthorizationRequired bool = true
 	if unAuthoriziedPaths != nil && len(unAuthoriziedPaths) > 0 && path != "" {
 		for _, unAuthoriziedPath := range unAuthoriziedPaths {
