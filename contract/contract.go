@@ -68,5 +68,9 @@ type GetUserRaundHistoryResponse struct {
 	Attempts []*entity.UserRaundColorValidationAttempt `json:"attempts"`
 }
 
+type GetUserStageInfoResponse struct {
+	Stages []*entity.StageInfo `json:"userStages"`
+}
+
 type GetRankingRequest struct {
 }

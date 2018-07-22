@@ -24,6 +24,28 @@ hmget user-raund-generated-random-colors 56dd5068-20ce-4f6d-845b-ea4990008bac
 */
 
 const raundStartPoint int = 20
+const defaultLevelNumber = 2
+const totalLevelCount = 4
+const defaultRaundCountPerStage = 10
+
+func (service *ColorService) GetUserStageInfo(userId string) (*contract.GetUserStageInfoResponse, error) {
+	response := &contract.GetUserStageInfoResponse{}
+
+	stages := make([]*entity.StageInfo, 0, totalLevelCount)
+
+	for stage := 1; stage <= totalLevelCount; stage++ {
+		stageCount, err := service.getUserStageInfo(userId, stage)
+
+		if err != nil {
+			return nil, err
+		}
+		stages = append(stages, &entity.StageInfo{Stage: stage, UserStageCount: stageCount, DefaultRaundCountPerStage: defaultRaundCountPerStage})
+	}
+
+	response.Stages = stages
+
+	return response, nil
+}
 
 func (service *ColorService) GetUserRaundHistory(userId string, sendedKey string) (*contract.GetUserRaundHistoryResponse, error) {
 	response := &contract.GetUserRaundHistoryResponse{}
@@ -390,8 +412,8 @@ func (service *ColorService) GetLevels() (*contract.GetLevelResponse, error) {
 	response := &contract.GetLevelResponse{}
 	var err error
 
-	response.LevelCount = 4
-	response.DefaultLevel = 2
+	response.LevelCount = totalLevelCount
+	response.DefaultLevel = defaultLevelNumber
 
 	return response, err
 }
@@ -1204,6 +1226,64 @@ func (service *ColorService) getUserRaundLevel(userId string) (int, error) {
 	var result string
 	var err error
 	result, err = service.redisClient.HMGet("user-raund-level", userId)
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	level, err := strconv.Atoi(result)
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return level, nil
+}
+
+func (service *ColorService) getUserStageInfo(userId string, stage int) (int, error) {
+	var result string
+	var err error
+	result, err = service.redisClient.HMGet(fmt.Sprintf("user-stage-info-%s", userId), strconv.Itoa(stage))
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	if result == "" {
+		result = "0"
+	}
+
+	level, err := strconv.Atoi(result)
+
+	if err != nil {
+		return 0, types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return level, nil
+}
+
+func (service *ColorService) setUserStageInfo(userId string, stage int, count int) error {
+	data := make(map[string]interface{})
+
+	data[strconv.Itoa(stage)] = count
+
+	_, err := service.redisClient.HMSet(fmt.Sprintf("user-stage-info-%s", userId), data)
+
+	if err != nil {
+		return types.NewBusinessException("system exception", "exp.systemexception")
+	}
+
+	return nil
+}
+
+func (service *ColorService) getDefaultStageInfo(stage int) (int, error) {
+	var result string
+	var err error
+	result, err = service.redisClient.HMGet("default-stage-info", strconv.Itoa(stage))
 
 	if err != nil {
 		return 0, types.NewBusinessException("system exception", "exp.systemexception")

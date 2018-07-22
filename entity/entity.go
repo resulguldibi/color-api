@@ -74,6 +74,12 @@ type UserRaundStepNumber struct {
 	Step int `json:"step"`
 }
 
+type StageInfo struct {
+	UserStageCount            int `json:"userCount"`
+	DefaultRaundCountPerStage int `json:"defaultCount"`
+	Stage                     int `json:"stage"`
+}
+
 type UserRaundColorValidationAttempt struct {
 	SendedColors []*Color `json:"sendedColors"`
 	MixedColor   *Color   `json:"mixedColor"`

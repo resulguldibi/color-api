@@ -68,6 +68,12 @@ func NewServer() *gin.Engine {
 		colorHandler.HandleRaundHistory(ctx)
 	})
 
+	server.GET("/user/stage", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
+		colorHandler.HandleGetUserStageInfo(ctx)
+	})
+
 	server.GET("/levels", func(ctx *gin.Context) {
 		dbClient := dbClientFactory.NewDBClient()
 		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))

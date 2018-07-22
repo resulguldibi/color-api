@@ -186,3 +186,21 @@ func (handler ColorHandler) HandleRankings(ctx *gin.Context) {
 	util.CheckErr(err)
 	ctx.JSON(http.StatusOK, response)
 }
+
+func (handler ColorHandler) HandleGetUserStageInfo(ctx *gin.Context) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			util.HandleErr(ctx, err)
+		}
+	}()
+
+	userData, isExist := ctx.Get("User")
+	var user entity.User
+	if isExist {
+		user = userData.(entity.User)
+	}
+	response, err := handler.colorService.GetUserStageInfo(user.Id)
+	util.CheckErr(err)
+	ctx.JSON(http.StatusOK, response)
+}
