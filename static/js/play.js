@@ -755,3 +755,44 @@
 
 		},1000);
 	}
+
+	function registerForMultiPlay(){
+
+		window.multiPlaySocket = new WebSocket(getHostAndPort()+'/multiplay/register?Authorization=' + window.localStorage.getItem("colorToken"));
+		window.multiPlaySocket.onmessage = function(response){
+			console.log(response);
+			$('#pnlResult').text(response.data)
+		}
+
+	}
+
+	function getHostAndPort(){
+		var url = window.location.href;
+		var arr = url.split("/");
+		var result = arr[0] + "//" + arr[2]
+		return result.replace("http", "ws")
+	}
+
+	function unRegisterForMultiPlay() {
+
+		var multiplayUnRegisterResponse;
+		$.ajax({
+			type: 'GET',
+			url: '../multiplay/unregister',
+			async: false,
+			contentType: 'application/json',
+			headers: {
+				'Authorization': window.localStorage.getItem("colorToken"),
+				'RaundKey': window.localStorage.getItem("raundKey")
+			},
+			success: function (result) {
+				debugger;
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				multiplayUnRegisterResponse = JSON.parse(jqXHR.responseText)
+			}
+		});
+
+		return multiplayUnRegisterResponse
+
+	}

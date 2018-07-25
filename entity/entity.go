@@ -2,6 +2,7 @@ package entity
 
 import (
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/websocket"
 )
 
 type ResponseStatus struct {
@@ -94,3 +95,7 @@ type IEntity interface {
 }
 
 func (color Color) Do() {}
+
+type SocketConnection struct {
+	connection *websocket.Conn
+}

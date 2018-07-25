@@ -32,12 +32,25 @@ func NewServer() *gin.Engine {
 	server.Static("/images", "static/images")
 	//server.Use(static.Serve("/assets", static.LocalFile("/assets", false)))
 
+	hub := service.NewSocketHub()
+	go hub.Broadcast()
+	go hub.Register()
+	go hub.UnRegister()
+	go hub.RegisterMatch()
+	go hub.UnRegisterMatch()
+	go hub.RegisterMultiPlay()
+	go hub.UnRegisterMultiPlay()
+
 	server.GET("/google/oauth2", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "googleoauth2.html", nil)
 	})
 
 	server.GET("/play", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "play.html", nil)
+	})
+
+	server.GET("/multiplay", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "multiplay.html", nil)
 	})
 
 	server.GET("/stage", func(ctx *gin.Context) {
@@ -89,6 +102,16 @@ func NewServer() *gin.Engine {
 	server.POST("/google/oauth2/token", func(ctx *gin.Context) {
 		userHandler := handler.NewUserHandler(service.NewUserServiceWithHttpClient(redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
 		userHandler.HandleOAuth2Google(ctx)
+	})
+
+	server.GET("/multiplay/register", func(ctx *gin.Context) {
+		socketHandler := handler.NewSocketHandler(service.NewSocketService())
+		socketHandler.HandleRegisterForMultiPlay(ctx, hub)
+	})
+
+	server.GET("/multiplay/unregister", func(ctx *gin.Context) {
+		socketHandler := handler.NewSocketHandler(service.NewSocketService())
+		socketHandler.HandleUnRegisterForMultiPlay(ctx, hub)
 	})
 
 	server.GET("/ranking", func(ctx *gin.Context) {

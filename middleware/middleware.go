@@ -19,6 +19,10 @@ func UseUserMiddleware() gin.HandlerFunc {
 
 		if isAuthorizationRequired(c.Request.URL.Path) && isAuthorizationEnabled() {
 
+			if authorization == "" {
+				authorization = c.Request.URL.Query().Get("Authorization")
+			}
+
 			// get user-id from client in http request header with key "Authorization" in JWT format
 			if authorization == "" {
 				c.AbortWithError(http.StatusUnauthorized, errors.New("No Authorization header found"))
@@ -49,7 +53,7 @@ func UseUserMiddleware() gin.HandlerFunc {
 }
 
 func isAuthorizationRequired(path string) bool {
-	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token", "/google/oauth2", "/favicon.ico", "/", "/play", "/stage", "/css/", "/css/play.css", "/js", "/js/play.js", "/images", "/images/happy.png", "/images/angry.png", "/images/angry2.png", "/images/history.png", "/images/star.png", "/images/timer.png", "/images/mark.png"}
+	unAuthoriziedPaths := []string{"/signin", "/signup", "/google/oauth2/token", "/google/oauth2", "/favicon.ico", "/", "/play", "/multiplay", "/stage", "/css/", "/css/play.css", "/js", "/js/play.js", "/images", "/images/happy.png", "/images/angry.png", "/images/angry2.png", "/images/history.png", "/images/star.png", "/images/timer.png", "/images/mark.png"}
 	var isAuthorizationRequired bool = true
 	if unAuthoriziedPaths != nil && len(unAuthoriziedPaths) > 0 && path != "" {
 		for _, unAuthoriziedPath := range unAuthoriziedPaths {

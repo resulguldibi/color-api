@@ -17,6 +17,9 @@ type UserService struct {
 	httpClient  httpClient.IHttpClient
 }
 
+type SocketService struct {
+}
+
 func NewColorService(colorRepository repository.ColorRepository, redisClient redisClient.IRedisClient) ColorService {
 	return ColorService{colorRepository: colorRepository, redisClient: redisClient}
 }
@@ -31,4 +34,8 @@ func NewUserService(redisClient redisClient.IRedisClient) UserService {
 
 func NewUserServiceWithHttpClient(redisClient redisClient.IRedisClient, httpClient httpClient.IHttpClient) UserService {
 	return UserService{redisClient: redisClient, httpClient: httpClient}
+}
+
+func NewSocketService() SocketService {
+	return SocketService{}
 }
