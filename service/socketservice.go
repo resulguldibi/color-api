@@ -63,6 +63,19 @@ func (s *SocketService) GetSocketConnection(ctx *gin.Context, user entity.User, 
 
 }
 
+func (s *SocketService) AcceptMatchForMultiPlay(ctx *gin.Context, user entity.User, hub *SocketHub) {
+
+	fmt.Println("Before GetSocketConnection")
+
+	socketClient := s.GetSocketConnection(ctx, user, hub)
+
+	fmt.Println("Before AcceptMatchForMultiPlay")
+
+	socketClient.hub.acceptMatchForMultiPlay <- socketClient
+
+	fmt.Println("After AcceptMatchForMultiPlay")
+}
+
 func (s *SocketService) RegisterForMultiPlay(ctx *gin.Context, user entity.User, hub *SocketHub) {
 
 	socketClient := s.CreateSocketConnection(ctx, user, hub)

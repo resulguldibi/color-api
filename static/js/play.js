@@ -766,6 +766,26 @@
 
 	}
 
+	function acceptMatchForMultiPlay() {
+		
+
+		$.ajax({
+			type: 'GET',
+			url: '../multiplay/accept',
+			async: false,
+			contentType: 'application/json',
+			headers: {
+				'Authorization': window.localStorage.getItem("colorToken")
+			},
+			success: function (result) {
+				debugger;
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				debugger;
+			}
+		});
+	}
+
 	function getHostAndPort(){
 		var url = window.location.href;
 		var arr = url.split("/");

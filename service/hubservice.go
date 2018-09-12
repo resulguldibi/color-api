@@ -44,14 +44,17 @@ type SocketHub struct {
 
 	registerMultiPlay chan *SocketClient
 
+	acceptMatchForMultiPlay chan *SocketClient
+
 	registerMatch chan *MultiPlayMatch
 
 	unRegisterMatch chan *MultiPlayMatch
 }
 
 type MultiPlayMatch struct {
-	clients map[*SocketClient]bool
-	wg      sync.WaitGroup
+	clients           map[*SocketClient]bool
+	clientAcceptances map[*SocketClient]bool
+	wg                sync.WaitGroup
 }
 
 const (
@@ -75,16 +78,17 @@ var (
 
 func NewSocketHub() *SocketHub {
 	return &SocketHub{
-		broadcast:           make(chan []byte),
-		register:            make(chan *SocketClient),
-		unregister:          make(chan *SocketClient),
-		clients:             make(map[*SocketClient]bool),
-		clientMatchMapping:  make(map[*SocketClient]*MultiPlayMatch),
-		multiPlayMatches:    make(map[*MultiPlayMatch]bool),
-		registerMultiPlay:   make(chan *SocketClient),
-		unRegisterMultiPlay: make(chan *SocketClient),
-		registerMatch:       make(chan *MultiPlayMatch),
-		unRegisterMatch:     make(chan *MultiPlayMatch),
+		broadcast:               make(chan []byte),
+		register:                make(chan *SocketClient),
+		unregister:              make(chan *SocketClient),
+		clients:                 make(map[*SocketClient]bool),
+		clientMatchMapping:      make(map[*SocketClient]*MultiPlayMatch),
+		multiPlayMatches:        make(map[*MultiPlayMatch]bool),
+		registerMultiPlay:       make(chan *SocketClient),
+		acceptMatchForMultiPlay: make(chan *SocketClient),
+		unRegisterMultiPlay:     make(chan *SocketClient),
+		registerMatch:           make(chan *MultiPlayMatch),
+		unRegisterMatch:         make(chan *MultiPlayMatch),
 	}
 }
 
@@ -200,9 +204,46 @@ func (h *SocketHub) Register() {
 	}
 }
 
+func (h *SocketHub) AcceptMatchForMultiPlay() {
+
+	for {
+		select {
+
+		case client := <-h.acceptMatchForMultiPlay:
+
+			multiPlayMatch := h.clientMatchMapping[client]
+
+			if multiPlayMatch != nil && multiPlayMatch.clients != nil && len(multiPlayMatch.clients) > 0 {
+
+				if _, ok := multiPlayMatch.clients[client]; ok {
+
+					multiPlayMatch.clientAcceptances[client] = true
+
+					opponent := multiPlayMatch.GetOpponentOf(client)
+
+					socketMessage := &SocketMessage{}
+					socketMessage.Message = fmt.Sprintf("your opponent %s accepted matching with you ", client.user.Email)
+					opponent.SendMessage(socketMessage)
+
+					if multiPlayMatch.clientAcceptances != nil && len(multiPlayMatch.clientAcceptances) == 2 {
+
+						for c, _ := range multiPlayMatch.clients {
+
+							socketMessage := &SocketMessage{}
+							socketMessage.Message = "you will start to playy !!!!"
+							c.SendMessage(socketMessage)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func (h *SocketHub) RegisterMultiPlay() {
 
 	clients := make(map[*SocketClient]bool)
+	clientAcceptances := make(map[*SocketClient]bool)
 
 	for {
 		select {
@@ -215,18 +256,18 @@ func (h *SocketHub) RegisterMultiPlay() {
 				clients[client] = true
 			}
 
-			fmt.Println("len(clients) ->", len(clients))
-
 			if len(clients) == 2 {
 
 				newMatch := &MultiPlayMatch{}
 				newMatch.clients = clients
+				newMatch.clientAcceptances = clientAcceptances
 				fmt.Println("before match ->")
 				newMatch.wg.Add(1)
 				h.registerMatch <- newMatch
 				newMatch.wg.Wait()
 				fmt.Println("after match ->")
 				clients = make(map[*SocketClient]bool)
+				clientAcceptances = make(map[*SocketClient]bool)
 			}
 		}
 	}

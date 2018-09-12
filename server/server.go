@@ -39,6 +39,7 @@ func NewServer() *gin.Engine {
 	go hub.RegisterMatch()
 	go hub.UnRegisterMatch()
 	go hub.RegisterMultiPlay()
+	go hub.AcceptMatchForMultiPlay()
 	go hub.UnRegisterMultiPlay()
 
 	server.GET("/google/oauth2", func(ctx *gin.Context) {
@@ -107,6 +108,11 @@ func NewServer() *gin.Engine {
 	server.GET("/multiplay/register", func(ctx *gin.Context) {
 		socketHandler := handler.NewSocketHandler(service.NewSocketService())
 		socketHandler.HandleRegisterForMultiPlay(ctx, hub)
+	})
+
+	server.GET("/multiplay/accept", func(ctx *gin.Context) {
+		socketHandler := handler.NewSocketHandler(service.NewSocketService())
+		socketHandler.HandleAcceptMatchForMultiPlay(ctx, hub)
 	})
 
 	server.GET("/multiplay/unregister", func(ctx *gin.Context) {
