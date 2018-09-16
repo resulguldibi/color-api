@@ -32,7 +32,7 @@ func NewServer() *gin.Engine {
 	server.Static("/images", "static/images")
 	//server.Use(static.Serve("/assets", static.LocalFile("/assets", false)))
 
-	hub := service.NewSocketHub()
+	hub := service.NewSocketHub(redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient())
 	go hub.Broadcast()
 	go hub.Register()
 	go hub.UnRegister()

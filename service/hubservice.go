@@ -2,9 +2,13 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"resulguldibi/color-api/entity"
+	"resulguldibi/color-api/repository"
+	httpClient "resulguldibi/http-client/entity"
+	redisClient "resulguldibi/redis-client/entity"
 	"sync"
 	"time"
 
@@ -25,7 +29,8 @@ type SocketClient struct {
 }
 
 type SocketHub struct {
-
+	redisClient redisClient.IRedisClient
+	httpClient  httpClient.IHttpClient
 	// Registered clients.
 	clients            map[*SocketClient]bool
 	multiPlayMatches   map[*MultiPlayMatch]bool
@@ -76,7 +81,7 @@ var (
 	space   = []byte{' '}
 )
 
-func NewSocketHub() *SocketHub {
+func NewSocketHub(redisClient redisClient.IRedisClient, httpClient httpClient.IHttpClient) *SocketHub {
 	return &SocketHub{
 		broadcast:               make(chan []byte),
 		register:                make(chan *SocketClient),
@@ -89,6 +94,8 @@ func NewSocketHub() *SocketHub {
 		unRegisterMultiPlay:     make(chan *SocketClient),
 		registerMatch:           make(chan *MultiPlayMatch),
 		unRegisterMatch:         make(chan *MultiPlayMatch),
+		redisClient:             redisClient,
+		httpClient:              httpClient,
 	}
 }
 
@@ -127,7 +134,8 @@ func (h *SocketHub) RegisterMatch() {
 					opponent := multiPlayMatch.GetOpponentOf(c)
 
 					socketMessage := &SocketMessage{}
-					socketMessage.Message = fmt.Sprintf("you matched with %s", opponent.user.Email)
+					socketMessage.MessageKey = "info"
+					socketMessage.MessageData = fmt.Sprintf("you matched with %s", opponent.user.Email)
 					c.SendMessage(socketMessage)
 				}
 			}
@@ -172,7 +180,8 @@ func (h *SocketHub) UnRegisterMatch() {
 					}
 
 					socketMessage := &SocketMessage{}
-					socketMessage.Message = "you unmatched !!!!"
+					socketMessage.MessageKey = "info"
+					socketMessage.MessageData = "you unmatched !!!!"
 					c.SendMessage(socketMessage)
 				}
 			}
@@ -222,16 +231,35 @@ func (h *SocketHub) AcceptMatchForMultiPlay() {
 					opponent := multiPlayMatch.GetOpponentOf(client)
 
 					socketMessage := &SocketMessage{}
-					socketMessage.Message = fmt.Sprintf("your opponent %s accepted matching with you ", client.user.Email)
+					socketMessage.MessageKey = "info"
+					socketMessage.MessageData = fmt.Sprintf("your opponent %s accepted matching with you ", client.user.Email)
+
 					opponent.SendMessage(socketMessage)
 
 					if multiPlayMatch.clientAcceptances != nil && len(multiPlayMatch.clientAcceptances) == 2 {
+						//generate random colors and send them to clients.
+
+						colorService := NewColorServiceHttpClient(repository.ColorRepository{}, h.redisClient, h.httpClient)
+
+						randomColorsResponse, err := colorService.GetRandomColorsWithOutUser(2)
+
+						randomColorsResponseData, _ := json.Marshal(randomColorsResponse)
+
+						socketMessage2 := &SocketMessage{}
+						socketMessage2.MessageKey = "initialColors"
+						socketMessage2.MessageData = string(randomColorsResponseData)
+
+						if err != nil {
+							panic(err)
+						}
 
 						for c, _ := range multiPlayMatch.clients {
 
 							socketMessage := &SocketMessage{}
-							socketMessage.Message = "you will start to playy !!!!"
+							socketMessage.MessageKey = "info"
+							socketMessage.MessageData = "you will start to playy !!!!"
 							c.SendMessage(socketMessage)
+							c.SendMessage(socketMessage2)
 						}
 					}
 				}

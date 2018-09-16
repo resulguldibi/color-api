@@ -20,7 +20,8 @@ type SocketConnection struct {
 }
 
 type SocketMessage struct {
-	Message string `json:"message"`
+	MessageKey  string `json:"messageKey"`
+	MessageData string `json:"messageData"`
 }
 
 type SocketClientPool struct {
@@ -106,7 +107,8 @@ func (client *SocketClient) ReadMessage() {
 	}
 
 	socketMessage := &SocketMessage{}
-	socketMessage.Message = fmt.Sprintf("you send me this message -> %s", string(message))
+	socketMessage.MessageKey = "info"
+	socketMessage.MessageData = fmt.Sprintf("you send me this message -> %s", string(message))
 
 	client.SendMessage(socketMessage)
 }

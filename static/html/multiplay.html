@@ -3,23 +3,88 @@
 <head>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <link rel="stylesheet" type="text/css" href="css/play.css">
-    <script src="js/play.js"></script>
 </head>
 
 <body>
 
-    
-    
     <button class="btnHelp" style="width: 100px;" title="" onclick="registerForMultiPlay()">connect</button>
 
     <button class="btnHelp" style="width: 100px;" title="" onclick="acceptMatchForMultiPlay()">accept match</button>
 
     <span id="pnlResult"></span>
 
-   
+    <div id="header">
+        <div class="pnlUser" id="pnlUser">
+            <div>
+                <img id="imgUserPicture" class="imgUserPicture" src="" />
+            </div>
+        </div>
+    </div>
+
+    <div id="mainColor" class="pnlMainColor"></div>
+    <div class="clear"></div>
+
+    <div class="resultPanel">
+        <div align="center">
+            <div style="width:164px;margin:auto;">
+                <div align="center" class="fLeft">
+                    <div align="center" style="width:82px;">
+                        <img src="images/mark.png" title="point" class="imgResultHappy fLeft" />
+                        <div align="center" id="pnlRaundStartPoint" class="pnlStepNumber fLeft" style="width:40px;margin-left:2px;"></div>
+                    </div>
+
+                </div>
+                <div align="center" class="fLeft">
+                    <div align="center" style="width:82px;">
+                        <img src="images/timer.png" title="timer" class="imgResultHappy fLeft" />
+                        <div align="center" id="pnlTimer" class="pnlTimer fLeft" style="width:40px;margin-left:2px;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="clear"></div>
+        <div align="center" id="pnlResult" class="pnlResult">
+            <img id="imgResultHappy" src="images/happy.png" class="imgResultHappy" style="display: none;" />
+            <img id="imgResultAngry" src="images/angry.png" class="imgResultAngry" style="display: none;" />
+            <img id="imgResultHelp" src="images/angry2.png" class="imgResultHelp" style="display: none;" />
+        </div>
+
+        <div align="center" id="pnlTextResult" class="pnlTextResult">
+
+        </div>
+
+    </div>
+
+    <div id="randomColors" class="level2RandomContainer"></div>
+
+    <div class="pnlSettings">
+        <div class="pnlRefreshSettingsContainer">
+            <button class="pnlRefreshSettings" onclick="refreshItems()">refresh</button>
+        </div>
+        <div class="pnlLevelContainer">
+            <select id="slcLevels" onchange="onLevelChange(this)" class="slctLevel">
+				
+			</select>
+        </div>
+        <div class="pnlHelpContainer">
+            <button class="btnHelp" title="sonucu göster" onclick="help()">??</button>
+        </div>
+        <div class="pnlStepHelpContainer">
+            <button class="btnStepHelp" title="renk satın al" onclick="stepHelp()">?</button>
+        </div>
+
+        <div class="pnlRaundHistoryContainer">
+            <button class="btnRaundHistory" title="raund history" onclick="getRaundHistory()"></button>
+        </div>
+        <div id="pnlTotalPoint" class="pnlTotalPoint">
+
+        </div>
+    </div>
 
 </body>
 
-
+<script src="js/multiplay.js"></script>
 
 </html>

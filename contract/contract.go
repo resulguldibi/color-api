@@ -11,6 +11,7 @@ type GetColorResponse struct {
 	RaundStartPoint int             `json:"raundStartPoint"`
 	TotalPoint      int             `json:"totalPoint"`
 	RaundNumber     int64           `json:"raundNumber"`
+	SelectedColors  []*entity.Color `json:"-"`
 }
 
 type GetLevelResponse struct {

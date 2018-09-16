@@ -432,7 +432,8 @@ func (service *ColorService) GetLevels() (*contract.GetLevelResponse, error) {
 	return response, err
 }
 
-func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
+func (service *ColorService) GetRandomColorsWithOutUser(level int64) (*contract.GetColorResponse, error) {
+
 	response := &contract.GetColorResponse{}
 	var err error
 	var count int64 = 5*level + 1
@@ -448,6 +449,7 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 			selectedColors = append(selectedColors, randomColor)
 		}
 	}
+	response.SelectedColors = selectedColors
 
 	mixedColor := util.GenerateMixColor(randomColors)
 
@@ -497,6 +499,19 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 		mixedColor.Name = getColorNameResponse.Name.Value
 	}
 
+	response.MixedColor = mixedColor
+	response.RandomColors = finalRandomColors
+	response.Code = code
+
+	return response, nil
+}
+
+func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
+	response := &contract.GetColorResponse{}
+	var err error
+
+	response, err = service.GetRandomColorsWithOutUser(level)
+
 	var raundNumber int64 = 0
 	raundNumber, err = service.getUserRaundNumberByLevel(userId, level)
 
@@ -505,9 +520,7 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	}
 
 	response.RaundNumber = raundNumber
-	response.MixedColor = mixedColor
-	response.RandomColors = finalRandomColors
-	response.Code = code
+
 	response.RaundStartPoint = int(level) * raundStartPoint
 	var totalPoint int
 	totalPoint, err = service.getUserTotalPoint(userId)
@@ -518,26 +531,26 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 
 	response.TotalPoint = totalPoint
 
-	err = service.setUserRaundPoint(userId, code, int(response.RaundStartPoint))
+	err = service.setUserRaundPoint(userId, response.Code, int(response.RaundStartPoint))
 
 	if err != nil {
 		panic(err)
 	}
 
-	err = service.setUserRaundGeneratedSelectedColors(code, selectedColors)
+	err = service.setUserRaundGeneratedSelectedColors(response.Code, response.SelectedColors)
 
 	if err != nil {
 		panic(err)
 	}
 
 	//save generated random colors to use in /validate endpoint
-	allColors := append(finalRandomColors, mixedColor)
-	err = service.setUserRaundGeneratedRandomColors(code, allColors)
+	allColors := append(response.RandomColors, response.MixedColor)
+	err = service.setUserRaundGeneratedRandomColors(response.Code, allColors)
 	if err != nil {
 		panic(err)
 	}
 
-	err = service.setUserRaundGeneratedMixedColor(code, mixedColor)
+	err = service.setUserRaundGeneratedMixedColor(response.Code, response.MixedColor)
 
 	if err != nil {
 		panic(err)
@@ -559,7 +572,7 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 		}
 	}
 
-	err = service.setUserRaundKey(userId, code)
+	err = service.setUserRaundKey(userId, response.Code)
 	if err != nil {
 		panic(err)
 	}
