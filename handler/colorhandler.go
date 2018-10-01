@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"resulguldibi/color-api/contract"
 	"resulguldibi/color-api/entity"
+	"resulguldibi/color-api/service"
 	"resulguldibi/color-api/types"
 	"resulguldibi/color-api/util"
 	"strconv"
@@ -203,4 +204,48 @@ func (handler ColorHandler) HandleGetUserStageInfo(ctx *gin.Context) {
 	response, err := handler.colorService.GetUserStageInfo(user.Id)
 	util.CheckErr(err)
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (handler ColorHandler) HandleMultiPlayValidateColors(ctx *gin.Context, hub *service.SocketHub) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			util.HandleErr(ctx, err)
+		}
+	}()
+
+	request := contract.ValidateColorsRequest{}
+	key := ctx.GetHeader("RaundKey")
+
+	if err := ctx.ShouldBindJSON(&request); err == nil {
+		userData, isExist := ctx.Get("User")
+		var user entity.User
+		if isExist {
+			user = userData.(entity.User)
+		}
+		response, err := handler.colorService.ValidateColors(user.Id, key, request.SelectedColors)
+
+		var messageToOpponent string
+
+		socketService := &service.SocketService{}
+		multiplayMatchMoveMessageRequest := &contract.MultiplayMatchMoveMessageRequest{}
+		multiplayMatchMoveMessageRequest.IsSuccess = !response.IsValid
+		if response.IsValid {
+			messageToOpponent = "your opponent win :("
+		} else {
+			messageToOpponent = "your opponent lost its changes !!!"
+		}
+
+		multiplayMatchMoveMessageRequest.Message = messageToOpponent
+
+		socketService.MultiplayMessage(ctx, multiplayMatchMoveMessageRequest, user, hub)
+
+		util.CheckErr(err)
+		ctx.JSON(http.StatusOK, response)
+	} else {
+		exp := &types.ExceptionMessage{}
+		_ = json.Unmarshal([]byte(fmt.Sprint(err)), exp)
+		responseSatus := util.PrepareResponseStatusWithMessage(false, exp.Message, exp.Code, exp.Stack)
+		ctx.JSON(http.StatusBadRequest, responseSatus)
+	}
 }

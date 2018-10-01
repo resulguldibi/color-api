@@ -41,6 +41,8 @@ func NewServer() *gin.Engine {
 	go hub.RegisterMultiPlay()
 	go hub.AcceptMatchForMultiPlay()
 	go hub.UnRegisterMultiPlay()
+	go hub.MultiPlayMatchMove()
+	go hub.MultiPlayMatchMessage()
 
 	server.GET("/google/oauth2", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "googleoauth2.html", nil)
@@ -118,6 +120,17 @@ func NewServer() *gin.Engine {
 	server.GET("/multiplay/unregister", func(ctx *gin.Context) {
 		socketHandler := handler.NewSocketHandler(service.NewSocketService())
 		socketHandler.HandleUnRegisterForMultiPlay(ctx, hub)
+	})
+
+	server.POST("/multiplay/move", func(ctx *gin.Context) {
+		socketHandler := handler.NewSocketHandler(service.NewSocketService())
+		socketHandler.HandleMultiplayMove(ctx, hub)
+	})
+
+	server.POST("/multiplay/validate", func(ctx *gin.Context) {
+		dbClient := dbClientFactory.NewDBClient()
+		colorHandler := handler.NewColorHandler(service.NewColorServiceHttpClient(repository.NewColorRepository(dbClient), redisClientFactory.GetRedisClient(), httpClientFactory.GetHttpClient()))
+		colorHandler.HandleMultiPlayValidateColors(ctx, hub)
 	})
 
 	server.GET("/ranking", func(ctx *gin.Context) {

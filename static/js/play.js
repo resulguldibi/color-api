@@ -103,8 +103,7 @@
 	            getColorsResponse = result
                 window.localStorage.setItem("raundKey", result.code)
                 setRaundStartPoint(result.raundStartPoint)
-				setTotalPoint(result.totalPoint)
-				helpedColors = []
+				setTotalPoint(result.totalPoint)				
 
 	        },
 	        processData: false
@@ -441,8 +440,8 @@
         }
 
         return colors
-    }
-
+	}
+	
     function prepareMixColor(colors) {
         
         validateColorRequest.selectedColors = colors
@@ -535,7 +534,7 @@
 	        }
         }
 
-        var colors = getSelectedColors()
+		var colors = getSelectedColors()		
         var mixColor = prepareMixColor(colors)
 
 	    if (triedItemCount == n) {

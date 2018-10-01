@@ -487,8 +487,6 @@ func (service *ColorService) GetRandomColorsWithOutUser(level int64) (*contract.
 		finalRandomColors[random] = tmp
 	}
 
-	code := util.GenerateGuid()
-
 	getColorNameResponse, err := service.GetColorName(mixedColor)
 
 	if err != nil {
@@ -501,17 +499,13 @@ func (service *ColorService) GetRandomColorsWithOutUser(level int64) (*contract.
 
 	response.MixedColor = mixedColor
 	response.RandomColors = finalRandomColors
-	response.Code = code
 
 	return response, nil
 }
 
-func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
-	response := &contract.GetColorResponse{}
+func (service *ColorService) GetExtendRandomColorsResponse(response *contract.GetColorResponse, userId string, level int64) (*contract.GetColorResponse, error) {
+
 	var err error
-
-	response, err = service.GetRandomColorsWithOutUser(level)
-
 	var raundNumber int64 = 0
 	raundNumber, err = service.getUserRaundNumberByLevel(userId, level)
 
@@ -584,6 +578,24 @@ func (service *ColorService) GetRandomColors(userId string, level int64) (*contr
 	}
 
 	return response, err
+}
+
+func (service *ColorService) GetRandomColors(userId string, level int64) (*contract.GetColorResponse, error) {
+	response := &contract.GetColorResponse{}
+
+	var err error
+
+	response, err = service.GetRandomColorsWithOutUser(level)
+
+	if err != nil {
+		panic(err)
+	}
+
+	code := util.GenerateGuid()
+
+	response.Code = code
+
+	return service.GetExtendRandomColorsResponse(response, userId, level)
 }
 
 func (service *ColorService) getUserRaundNumberByLevel(userId string, level int64) (int64, error) {

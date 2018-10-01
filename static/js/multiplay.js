@@ -55,7 +55,7 @@
 		var validateColorResponse;
 		$.ajax({
 			type: 'POST',
-			url: '../validate',
+			url: '../multiplay/validate',
 			async: false,
 			contentType: 'application/json',
 			headers: {
@@ -76,6 +76,36 @@
 
 		return validateColorResponse
 	}
+
+
+	function multiPlayMove(multiPlayMoveRequest) {
+
+		var multiPlayMoveResponse;
+		$.ajax({
+			type: 'POST',
+			url: '../multiplay/move',
+			async: false,
+			contentType: 'application/json',
+			headers: {
+				'Authorization': window.localStorage.getItem("colorToken"),
+				'RaundKey': window.localStorage.getItem("raundKey")
+			},
+			success: function (result) {
+				multiPlayMoveResponse = result
+				setRaundStartPoint(result.raundPoint)
+				setTotalPoint(result.totalPoint)
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				multiPlayMoveResponse = JSON.parse(jqXHR.responseText)
+			},
+			processData: false,
+			data: JSON.stringify(multiPlayMoveRequest)
+		});
+
+		return multiPlayMoveResponse
+	}
+
+	
 
 	function getColors() {
 		var getColorsResponse;
@@ -443,6 +473,20 @@
 		return colors
 	}
 
+	function getCurrentSelectedColor(item) {
+
+		var currentColor = $(item).find('.choise').first();
+
+		var color = {}
+		color.r = parseInt(currentColor.attr("r"))
+		color.g = parseInt(currentColor.attr("g"))
+		color.b = parseInt(currentColor.attr("b"))
+
+		return color
+	}
+
+	
+
 	function prepareMixColor(colors) {
 
 		validateColorRequest.selectedColors = colors
@@ -533,9 +577,32 @@
 			if (istried === 'true') {
 				triedItemCount = triedItemCount + 1;
 			}
-		}
+		}	
 
-		var colors = getSelectedColors()
+			
+		var colors = undefined;
+
+		colors = getSelectedColors();
+
+		var currentColor = getCurrentSelectedColor(item);
+
+
+
+		var tmpColors = [];
+
+		if (validate){
+
+			tmpColors.push(currentColor)
+
+			var multiPlayMoveRequest = {}
+
+			multiPlayMoveRequest.selectedColors = tmpColors
+
+			var multiPlayMoveResponse = multiPlayMove(multiPlayMoveRequest)
+
+		}		
+
+
 		var mixColor = prepareMixColor(colors)
 
 		if (triedItemCount == n) {
@@ -836,7 +903,13 @@
 			debugger;
 
 
-			initColors(JSON.parse(socketResponse))
+			response = JSON.parse(socketResponse)
+
+			initColors(response)
+			
+			window.localStorage.setItem("raundKey", response.code)
+			setRaundStartPoint(response.raundStartPoint)
+			setTotalPoint(response.totalPoint)	
 
 		}
 
@@ -846,6 +919,65 @@
 			$('#pnlResult').text(socketResponse)
 		}
 
+		
+
+		socketResponseHandlers["message"] = function (socketResponse) {
+
+			debugger;
+
+			var opponentMessageResponse = JSON.parse(socketResponse);
+			
+			clearResult();
+
+			if (opponentMessageResponse.issuccess){
+				$('#imgResultHappy').css("display", "block");
+			}else{
+				$('#imgResultAngry').css("display", "block");
+			}
+
+			$('#pnlTextResult').css("display", "block");
+			$('#pnlTextResult').html(opponentMessageResponse.message)
+		};
+
+		socketResponseHandlers["move"] = function (socketResponse) {
+			debugger;
+			
+			var opponentMoveColors = JSON.parse(socketResponse);
+
+
+
+			var listContainer = $('.level' + n + 'Container');
+
+		
+
+			if (opponentMoveColors != null && opponentMoveColors != undefined && opponentMoveColors.length > 0) {
+
+				for (var i = 0; i < listContainer.length; i++) {
+					var containerItem = listContainer[i]
+					var choiseItem = containerItem.childNodes[1];
+
+					var color = {}
+					color.r = parseInt(choiseItem.getAttribute("r"))
+					color.g = parseInt(choiseItem.getAttribute("g"))
+					color.b = parseInt(choiseItem.getAttribute("b"))
+
+					var istried = choiseItem.getAttribute("istried");
+					var isselected = isColorExist(opponentMoveColors, color);
+
+					if (isselected) {												
+						onDivContainerClick(containerItem, false);
+					}
+				}
+
+				var colors = getSelectedColors()
+				prepareMixColor(colors)
+				//displayHelpResult();
+				//setRaundStartPoint(getHelpResponse.point)
+				window.clearInterval(window.intervalId);
+			}
+			
+
+		}
 
 
 

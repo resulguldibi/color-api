@@ -7,6 +7,7 @@ import (
 	"log"
 	"resulguldibi/color-api/entity"
 	"resulguldibi/color-api/repository"
+	"resulguldibi/color-api/util"
 	httpClient "resulguldibi/http-client/entity"
 	redisClient "resulguldibi/redis-client/entity"
 	"sync"
@@ -54,12 +55,26 @@ type SocketHub struct {
 	registerMatch chan *MultiPlayMatch
 
 	unRegisterMatch chan *MultiPlayMatch
+
+	multiPlayMatchMove chan *MultiPlayMatchMove
+
+	multiPlayMatchMessage chan *MultiPlayMatchMessage
 }
 
 type MultiPlayMatch struct {
 	clients           map[*SocketClient]bool
 	clientAcceptances map[*SocketClient]bool
 	wg                sync.WaitGroup
+}
+
+type MultiPlayMatchMove struct {
+	Data   interface{}
+	Client *SocketClient
+}
+
+type MultiPlayMatchMessage struct {
+	Data   interface{}
+	Client *SocketClient
 }
 
 const (
@@ -94,6 +109,8 @@ func NewSocketHub(redisClient redisClient.IRedisClient, httpClient httpClient.IH
 		unRegisterMultiPlay:     make(chan *SocketClient),
 		registerMatch:           make(chan *MultiPlayMatch),
 		unRegisterMatch:         make(chan *MultiPlayMatch),
+		multiPlayMatchMove:      make(chan *MultiPlayMatchMove),
+		multiPlayMatchMessage:   make(chan *MultiPlayMatchMessage),
 		redisClient:             redisClient,
 		httpClient:              httpClient,
 	}
@@ -240,28 +257,129 @@ func (h *SocketHub) AcceptMatchForMultiPlay() {
 						//generate random colors and send them to clients.
 
 						colorService := NewColorServiceHttpClient(repository.ColorRepository{}, h.redisClient, h.httpClient)
+						level := int64(2)
 
-						randomColorsResponse, err := colorService.GetRandomColorsWithOutUser(2)
-
-						randomColorsResponseData, _ := json.Marshal(randomColorsResponse)
-
-						socketMessage2 := &SocketMessage{}
-						socketMessage2.MessageKey = "initialColors"
-						socketMessage2.MessageData = string(randomColorsResponseData)
+						randomColorsResponse, err := colorService.GetRandomColorsWithOutUser(level)
 
 						if err != nil {
 							panic(err)
 						}
 
-						for c, _ := range multiPlayMatch.clients {
+						//region send initial colors to client
 
-							socketMessage := &SocketMessage{}
-							socketMessage.MessageKey = "info"
-							socketMessage.MessageData = "you will start to playy !!!!"
-							c.SendMessage(socketMessage)
-							c.SendMessage(socketMessage2)
+						code := util.GenerateGuid()
+						randomColorsResponse.Code = code
+
+						clientRandomColorsResponse, err := colorService.GetExtendRandomColorsResponse(randomColorsResponse, client.user.Id, level)
+
+						if err != nil {
+							panic(err)
 						}
+
+						randomColorsResponseData, _ := json.Marshal(clientRandomColorsResponse)
+
+						clientSocketMessage := &SocketMessage{}
+						clientSocketMessage.MessageKey = "initialColors"
+						clientSocketMessage.MessageData = string(randomColorsResponseData)
+
+						client.SendMessage(clientSocketMessage)
+
+						//endregion
+
+						//#region send initial colors to client opponent
+
+						code = util.GenerateGuid()
+						randomColorsResponse.Code = code
+
+						opponentRandomColorsResponse, err := colorService.GetExtendRandomColorsResponse(randomColorsResponse, opponent.user.Id, level)
+
+						if err != nil {
+							panic(err)
+						}
+
+						opponentRandomColorsResponseData, _ := json.Marshal(opponentRandomColorsResponse)
+
+						opponentSocketMessage := &SocketMessage{}
+						opponentSocketMessage.MessageKey = "initialColors"
+						opponentSocketMessage.MessageData = string(opponentRandomColorsResponseData)
+
+						opponent.SendMessage(opponentSocketMessage)
+
+						//#endregion
+
 					}
+				}
+			}
+		}
+	}
+}
+
+func (h *SocketHub) MultiPlayMatchMove() {
+
+	for {
+		select {
+
+		case move := <-h.multiPlayMatchMove:
+
+			client := move.Client
+
+			multiPlayMatch := h.clientMatchMapping[client]
+
+			if multiPlayMatch != nil && multiPlayMatch.clients != nil && len(multiPlayMatch.clients) > 0 {
+
+				if _, ok := multiPlayMatch.clients[client]; ok {
+
+					multiPlayMatch.clientAcceptances[client] = true
+
+					opponent := multiPlayMatch.GetOpponentOf(client)
+
+					moveBytes, err := json.Marshal(move.Data)
+
+					if err != nil {
+						panic(err)
+					}
+
+					socketMessage := &SocketMessage{}
+					socketMessage.MessageKey = "move"
+					socketMessage.MessageData = string(moveBytes)
+
+					opponent.SendMessage(socketMessage)
+				}
+			}
+		}
+	}
+}
+
+func (h *SocketHub) MultiPlayMatchMessage() {
+
+	for {
+		select {
+
+		case message := <-h.multiPlayMatchMessage:
+
+			client := message.Client
+
+			multiPlayMatch := h.clientMatchMapping[client]
+
+			if multiPlayMatch != nil && multiPlayMatch.clients != nil && len(multiPlayMatch.clients) > 0 {
+
+				if _, ok := multiPlayMatch.clients[client]; ok {
+
+					multiPlayMatch.clientAcceptances[client] = true
+
+					opponent := multiPlayMatch.GetOpponentOf(client)
+
+					messageBytes, err := json.Marshal(message.Data)
+
+					if err != nil {
+						panic(err)
+					}
+
+					socketMessage := &SocketMessage{}
+					socketMessage.MessageKey = "message"
+					socketMessage.MessageData = string(messageBytes)
+
+					opponent.SendMessage(socketMessage)
 				}
 			}
 		}

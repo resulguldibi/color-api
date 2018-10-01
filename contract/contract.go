@@ -75,3 +75,12 @@ type GetUserStageInfoResponse struct {
 
 type GetRankingRequest struct {
 }
+
+type MultiplayMatchMoveRequest struct {
+	SelectedColors []*entity.Color `json:"selectedColors"`
+}
+
+type MultiplayMatchMoveMessageRequest struct {
+	IsSuccess bool   `json:"issuccess"`
+	Message   string `json:"message"`
+}

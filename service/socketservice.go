@@ -3,6 +3,7 @@ package service
 import (
 	"flag"
 	"fmt"
+	"resulguldibi/color-api/contract"
 	"resulguldibi/color-api/entity"
 
 	"sync"
@@ -120,4 +121,30 @@ func (client *SocketClient) SendMessage(message *SocketMessage) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *SocketService) MultiplayMove(ctx *gin.Context, request *contract.MultiplayMatchMoveRequest, user entity.User, hub *SocketHub) {
+
+	socketClient := s.GetSocketConnection(ctx, user, hub)
+
+	fmt.Println("Before MultiplayMove")
+
+	move := &MultiPlayMatchMove{Data: request.SelectedColors, Client: socketClient}
+
+	socketClient.hub.multiPlayMatchMove <- move
+
+	fmt.Println("After MultiplayMove")
+}
+
+func (s *SocketService) MultiplayMessage(ctx *gin.Context, request *contract.MultiplayMatchMoveMessageRequest, user entity.User, hub *SocketHub) {
+
+	socketClient := s.GetSocketConnection(ctx, user, hub)
+
+	fmt.Println("Before MultiplayMessage")
+
+	message := &MultiPlayMatchMessage{Data: request, Client: socketClient}
+
+	socketClient.hub.multiPlayMatchMessage <- message
+
+	fmt.Println("After MultiplayMessage")
 }
